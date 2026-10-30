@@ -1,0 +1,16 @@
+{
+  "log.prefix": "[Useleess Carpet] ",
+  "start": "Useleess Carpet %s for Minecraft %s",
+  "install.ready_cached": "Server jar ready (already built on this PC).",
+  "install.using_local": "Using your own copy of Mojang's server jar: %s",
+  "install.downloading": "Downloading Mojang's official Minecraft %s server jar from %s",
+  "install.building": "Building the server jar on this PC (Mojang's jar + the Carpet patch)...",
+  "install.built": "Server jar built.",
+  "install.written": "Server jar written to %s",
+  "error.broken_patch": "This Useleess Carpet download is damaged. Please download it again.",
+  "error.wrong_vanilla": "Mojang's server jar does not match (got %s, need %s). Delete the useleess-carpet folder and start again.",
+  "error.vanilla_missing_file": "Mojang's server jar is missing %s. Delete the useleess-carpet folder and start again.",
+  "error.result_differs": "Building the server jar went wrong at %s. Delete the useleess-carpet folder and start again.",
+  "error.unknown_version": "This Useleess Carpet download does not know Minecraft %s.",
+  "error.download_failed": "Could not download Mojang's Minecraft %s server jar (%s). Check the internet connection, or put Mojang's official server jar next to this file and start again."
+}

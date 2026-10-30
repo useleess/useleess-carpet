@@ -1,0 +1,10 @@
+mod/build/
+mod/.gradle/
+mod/out/
+mod/bin/
+mod/*.log
+reference/
+ingame-jar/
+run-ingame/
+*.jar
+!mod/gradle/wrapper/gradle-wrapper.jar
