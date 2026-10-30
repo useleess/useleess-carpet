@@ -6,6 +6,7 @@ import com.useleess.carpet.core.Messages;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
@@ -14,6 +15,8 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +34,7 @@ final class Window {
     private JTextArea text;
     private JProgressBar bar;
     private JButton close;
+    private JLabel highlight;
 
     Window(Messages m) throws InterruptedException, InvocationTargetException {
         this.m = m;
@@ -54,8 +58,17 @@ final class Window {
             JPanel bottom = new JPanel(new BorderLayout(8, 0));
             bottom.add(bar, BorderLayout.CENTER);
             bottom.add(close, BorderLayout.EAST);
+            highlight = new JLabel(" ");
+            highlight.setOpaque(true);
+            highlight.setBackground(new Color(255, 236, 140));
+            highlight.setForeground(new Color(40, 30, 0));
+            highlight.setFont(highlight.getFont().deriveFont(Font.BOLD, 20f));
+            highlight.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(200, 150, 0), 2), BorderFactory.createEmptyBorder(14, 16, 14, 16)));
+            highlight.setVisible(false);
             JPanel root = new JPanel(new BorderLayout(0, 8));
             root.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            root.add(highlight, BorderLayout.NORTH);
             root.add(new JScrollPane(text), BorderLayout.CENTER);
             root.add(bottom, BorderLayout.SOUTH);
             frame.setContentPane(root);
@@ -81,6 +94,17 @@ final class Window {
         });
     }
 
+    /** The one thing to remember, big and on top (user 2026-10-30: which script starts the server from now on). */
+    void highlight(String s) {
+        line(s);
+        SwingUtilities.invokeLater(() -> {
+            highlight.setText("<html>" + s.replace("&", "&amp;").replace("<", "&lt;") + "</html>");
+            highlight.setVisible(true);
+            frame.pack();
+            frame.toFront();
+        });
+    }
+
     /** A yes/no question with our own button names; {@code name} is its answer key for tests ("yes"/"no"). */
     boolean ask(String name, String yesKey, String noKey, String questionKey, Object... args) {
         if (answers.containsKey(name)) return answers.get(name).equals("yes") || answers.get(name).equals("update");
@@ -97,16 +121,16 @@ final class Window {
         return choice.get() == 0;
     }
 
-    /** The end: the progress bar stops and Close works; a good end closes by itself after a moment. */
+    /** The end: the progress bar stops and Close works; the window stays until Close (tests: closes by itself). */
     void finish(boolean ok) {
         SwingUtilities.invokeLater(() -> {
             bar.setIndeterminate(false);
             bar.setValue(ok ? 100 : 0);
             close.setEnabled(true);
         });
-        if (ok || automatic()) {
+        if (automatic()) {
             try {
-                Thread.sleep(automatic() ? 1000 : 15000);
+                Thread.sleep(1000);
             } catch (InterruptedException ignored) {
                 // closing now
             }

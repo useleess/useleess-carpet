@@ -54,12 +54,16 @@ public final class Main {
                 Path out = args.length > 1 ? Paths.get(args[1]).toAbsolutePath() : built;
                 if (!out.equals(built)) Files.move(built, out, StandardCopyOption.REPLACE_EXISTING);
                 log.say("install.written", out);
-                scripts(folder, out, java, log);
-                SelfRemover.remove(SelfRemover.selfJar(), folder, out, log, "install.next_start", out.getFileName());
+                if (folder.equals(out.getParent())) {
+                    Path ours = scripts(folder, out, java, log);
+                    SelfRemover.remove(SelfRemover.selfJar(), folder, out, log, "install.next_start", ours.getFileName());
+                } else {
+                    SelfRemover.remove(SelfRemover.selfJar(), folder, out, log, "install.next_start", out.getFileName());
+                }
                 return;
             }
-            scripts(folder, built, java, log);
-            SelfRemover.remove(SelfRemover.selfJar(), folder, built, log, "install.next_start", built.getFileName());
+            Path ours = scripts(folder, built, java, log);
+            SelfRemover.remove(SelfRemover.selfJar(), folder, built, log, "install.next_start", ours.getFileName());
             log.say("starting", built.getFileName());
         } catch (Problem p) {
             System.err.println(m.get("log.prefix") + m.get(p));
@@ -70,26 +74,23 @@ public final class Main {
     }
 
     /**
-     * Console start: no start script in the folder = ours is written; the owner's own scripts are never changed
-     * here, only named with the change to make (the double-click window offers to make it).
+     * Our own start script is (re)written; the owner's scripts are never changed (user 2026-10-30), the player is
+     * only told which of them still start another jar. Returns our script.
      */
-    static void scripts(Path folder, Path serverJar, String java, Downloader.Log log) throws IOException {
-        if (!folder.equals(serverJar.toAbsolutePath().getParent())) return;
-        List<StartScripts.Script> found = StartScripts.find(folder);
+    static Path scripts(Path folder, Path serverJar, String java, Downloader.Log log) throws IOException {
         String name = serverJar.getFileName().toString();
-        if (found.isEmpty()) {
-            log.say("install.script_created", StartScripts.create(folder, java, name, JavaFinder.isWindows()).getFileName());
-            return;
+        Path ours = StartScripts.create(folder, java, name, JavaFinder.isWindows());
+        log.say("install.script_created", ours.getFileName());
+        for (StartScripts.Script s : StartScripts.find(folder)) {
+            if (!s.starts(name)) log.say("install.script_other", s.file.getFileName(), s.jar, ours.getFileName());
         }
-        for (StartScripts.Script s : found) {
-            if (!s.starts(name)) log.say("install.script_hint", s.file.getFileName(), s.jar, name);
-        }
+        return ours;
     }
 
     /**
-     * Double-click start: the installer window builds the server jar, finds a Java 8, sorts out the start script
-     * (made when there is none, the owner's own updated only when they click, after a backup), asks for the EULA,
-     * then starts the server in Minecraft's own server window as a separate program and closes.
+     * Double-click start: the installer window builds the server jar, finds a Java 8, writes our start script
+     * (the owner's own are never changed), asks for the EULA, starts the server in Minecraft's own server window as
+     * a separate program, then shows in a highlighted box which script to double-click from now on.
      */
     static void gui(Messages m) throws Exception {
         Window w = new Window(m);
@@ -100,24 +101,8 @@ public final class Main {
             log.say("start", buildVersion(), v.minecraft);
             Path folder = Paths.get("").toAbsolutePath();
             Path built = Installer.ensure(patch, v, folder, Downloader.HTTP, log);
-            String name = built.getFileName().toString();
             Path java = JavaFinder.findJava8();
-            List<StartScripts.Script> found = StartScripts.find(folder);
-            Path script = null;
-            if (found.isEmpty()) {
-                script = StartScripts.create(folder, java == null ? "java" : java.toString(), name, JavaFinder.isWindows());
-                log.say("install.script_created", script.getFileName());
-            }
-            for (StartScripts.Script s : found) {
-                if (s.starts(name)) {
-                    script = s.file;
-                } else if (w.ask("script", "gui.update", "gui.keep", "gui.ask_update_script", s.file.getFileName(), s.jar, name)) {
-                    log.say("install.script_updated", s.file.getFileName(), StartScripts.update(s, name).getFileName());
-                    script = s.file;
-                } else {
-                    log.say("install.script_hint", s.file.getFileName(), s.jar, name);
-                }
-            }
+            Path script = scripts(folder, built, java == null ? "java" : java.toString(), log);
             if (java == null) {
                 log.say("gui.no_java8", "https://adoptium.net/temurin/releases/?version=8");
                 w.finish(false);
@@ -137,11 +122,8 @@ public final class Main {
             new ProcessBuilder(JavaFinder.windowless(java).toString(), "-Xmx2G", "-jar", built.toAbsolutePath().toString())
                     .directory(folder.toFile()).redirectInput(nul).redirectOutput(nul).redirectError(nul).start();
             log.say("gui.server_started");
-            if (script != null) {
-                SelfRemover.remove(SelfRemover.selfJar(), folder, built, log, "gui.next_start", script.getFileName());
-            } else {
-                SelfRemover.remove(SelfRemover.selfJar(), folder, built, log, "install.next_start", built.getFileName());
-            }
+            SelfRemover.remove(SelfRemover.selfJar(), folder, built, log, null, null);
+            w.highlight(m.get("gui.next_start", script.getFileName()));
             w.finish(true);
         } catch (Problem p) {
             w.line(m.get(p));

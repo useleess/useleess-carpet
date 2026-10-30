@@ -39,42 +39,43 @@ class SetupTest {
         assertEquals("old-server.jar", found.get(1).jar);
     }
 
-    @Test void updateChangesOnlyTheJarAndKeepsABackup() throws IOException {
-        String original = "@echo off\r\n\"C:\\Java 8\\bin\\java.exe\" -Xmx6G -XX:+UseG1GC -jar old-server.jar nogui\r\npause\r\n";
-        Path bat = write("start.bat", original);
-        StartScripts.Script s = StartScripts.find(dir).get(0);
-        Path backup = StartScripts.update(s, SERVER);
-        assertEquals("start.bat.backup", backup.getFileName().toString());
-        assertEquals(original, read(backup));
-        assertEquals(original.replace("old-server.jar", SERVER), read(bat));
-        assertTrue(StartScripts.find(dir).get(0).starts(SERVER));
+    @Test void ourScriptIsMadeAndTheOwnersAreNeverChanged() throws IOException {
+        String theirs = "@echo off\r\n\"C:\\Java 8\\bin\\java.exe\" -Xmx6G -jar old-server.jar nogui\r\npause\r\n";
+        Path bat = write("start.bat", theirs);
+        Path ours = StartScripts.create(dir, "java", SERVER, true);
+        assertEquals("start-useleess-carpet.bat", ours.getFileName().toString());
+        assertEquals(theirs, read(bat), "the owner's script is untouched");
+        List<StartScripts.Script> found = StartScripts.find(dir);
+        assertEquals(1, found.size(), "our own script is not listed as theirs");
+        assertEquals("start.bat", found.get(0).file.getFileName().toString());
+        assertFalse(found.get(0).starts(SERVER));
+        try (java.util.stream.Stream<Path> files = Files.list(dir)) {
+            assertEquals(2, files.count(), "no backups or other files");
+        }
     }
 
-    @Test void updateKeepsQuotesAndNeverOverwritesAnOldBackup() throws IOException {
-        write("start.bat", "java -jar \"C:\\srv\\my server.jar\" nogui\r\n");
-        write("start.bat.backup", "older backup");
-        StartScripts.Script s = StartScripts.find(dir).get(0);
-        assertEquals("start.bat.backup2", StartScripts.update(s, SERVER).getFileName().toString());
-        assertEquals("older backup", read(dir.resolve("start.bat.backup")));
-        assertEquals("java -jar \"" + SERVER + "\" nogui\r\n", read(dir.resolve("start.bat")));
+    @Test void ourScriptIsRewrittenWithTheCurrentJava() throws IOException {
+        StartScripts.create(dir, "java", SERVER, true);
+        Path again = StartScripts.create(dir, "C:\\jdk8\\bin\\java.exe", SERVER, true);
+        assertTrue(read(again).contains("\"C:\\jdk8\\bin\\java.exe\" -Xmx2G"), read(again));
     }
 
-    @Test void aScriptAlreadyStartingTheServerJarNeedsNothing() throws IOException {
+    @Test void aScriptAlreadyStartingTheServerJarIsRecognised() throws IOException {
         write("start.bat", "java -Xmx2G -jar " + SERVER + " nogui\r\n");
         assertTrue(StartScripts.find(dir).get(0).starts(SERVER));
         write("start.bat", "java -jar C:\\srv\\" + SERVER + "\r\n");
         assertTrue(StartScripts.find(dir).get(0).starts(SERVER));
     }
 
-    @Test void createsAWorkingScriptWhenThereIsNone() throws IOException {
+    @Test void createsAWorkingScript() throws IOException {
         Path bat = StartScripts.create(dir, "C:\\Program Files\\Java\\jre1.8.0_451\\bin\\java.exe", SERVER, true);
         assertEquals(StartScripts.NAME_WINDOWS, bat.getFileName().toString());
         String text = read(bat);
         assertTrue(text.contains("\"C:\\Program Files\\Java\\jre1.8.0_451\\bin\\java.exe\" -Xmx2G -jar " + SERVER + " nogui"), text);
         assertTrue(text.contains("cd /d \"%~dp0\"") && text.contains("pause"), text);
         Path sh = StartScripts.create(dir, "java", SERVER, false);
+        assertEquals(StartScripts.NAME_OTHER, sh.getFileName().toString());
         assertTrue(read(sh).contains("exec java -Xmx2G -jar " + SERVER + " nogui"));
-        assertTrue(StartScripts.find(dir).stream().allMatch(s -> s.starts(SERVER)), "our own scripts count as found next time");
     }
 
     @Test void javaVersionsAreRead() {

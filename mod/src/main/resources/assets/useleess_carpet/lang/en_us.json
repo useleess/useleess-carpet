@@ -17,14 +17,9 @@
   "error.result_differs": "Building the server jar went wrong at %s. Start again.",
   "error.unknown_version": "This Useleess Carpet download does not know Minecraft %s.",
   "error.download_failed": "Could not download Mojang's Minecraft %s server jar (%s). Check the internet connection, or put Mojang's official server jar next to this file and start again.",
-  "install.script_created": "Made %s: from now on double-click it (or run it) to start the server.",
-  "install.script_updated": "Updated %s to start Useleess Carpet (your original is saved as %s).",
-  "install.script_hint": "Your %s still starts %s. To use Useleess Carpet, change that to %s.",
+  "install.script_created": "Made %s.",
   "gui.title": "Useleess Carpet installer",
   "gui.close": "Close",
-  "gui.update": "Update my start script",
-  "gui.keep": "Leave it",
-  "gui.ask_update_script": "Your %s starts %s.\nUpdate it to start Useleess Carpet (%s)?\n\nOnly the jar name changes, and a backup of your file is saved first.",
   "gui.agree": "I agree",
   "gui.disagree": "No",
   "gui.ask_eula": "To run a Minecraft server you must agree to Mojang's EULA:\n%s\n\nDo you agree?",
@@ -32,7 +27,8 @@
   "gui.eula_declined": "The server was not started: the EULA was not accepted. Double-click the installer again when you agree.",
   "gui.no_java8": "No Java 8 found on this PC, and a 1.12.2 server needs Java 8. Install it from %s, then double-click the installer again.",
   "gui.java_found": "Using Java 8: %s",
-  "gui.server_started": "The server is starting in its own window. This window closes by itself.",
+  "gui.server_started": "The server is starting in its own window.",
   "gui.failed": "Something went wrong: %s",
-  "gui.next_start": "From now on double-click %s to start the server."
+  "gui.next_start": "From now on, double-click %s to start the server.",
+  "install.script_other": "Your %s still starts %s: from now on use %s instead (your file was not changed)."
 }

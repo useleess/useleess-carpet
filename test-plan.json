@@ -14,7 +14,7 @@
   {
    "prefix": "gui/",
    "min": 10,
-   "what": "double-click installer window (user 2026-10-30): own start script updated after a backup or kept, start-server script made when none, EULA asked, Java 8 found, server started in its own window, installer removed, the made script starts the server"
+   "what": "double-click installer window (user 2026-10-30): our own start-useleess-carpet.bat made, the owner's scripts never changed, EULA asked, Java 8 found, server started in its own window, installer removed, the made script starts the server"
   }
  ]
 }

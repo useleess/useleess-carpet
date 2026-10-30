@@ -97,7 +97,7 @@ result install/installer-removed $ok "the installer is still there after 30 s"
 # 1b. user 2026-10-30: the folder holds ONLY the server jar + the start script made for it (no temp folder, no
 # Mojang jar, no installer)
 left="$(ls -A | tr '\n' ' ')"
-ok=1; [ "$left" = "start-server.bat $SERVER_JAR " ] && has start-server.bat "$SERVER_JAR" && ok=0
+ok=1; [ "$left" = "start-useleess-carpet.bat $SERVER_JAR " ] && has start-useleess-carpet.bat "$SERVER_JAR" && ok=0
 result install/clean $ok "the folder holds: $(echo $left)"
 
 # 2. the finished jar holds vanilla, Carpet (Bullet + Kisde + VasTech) and Redstone Scope
@@ -176,52 +176,52 @@ gui_run() {
 }
 gone() { n=0; while [ $n -lt 30 ] && [ -e "$1" ]; do sleep 1; n=$((n + 1)); done; [ ! -e "$1" ]; }
 
-# G1. an existing server with its own start.bat (own Java, own memory): updated after a backup, EULA, server starts
+# G1. an existing server with its own start.bat: never changed (user 2026-10-30), ours is made, EULA, server starts
 D="$BASE/gui-existing"; mkdir -p "$D"
 printf '@echo off\r\n"C:\\Java8\\bin\\java.exe" -Xmx3G -XX:+UseG1GC -jar old-server.jar nogui\r\npause\r\n' > "$D/start.bat"
 cp "$D/start.bat" "$BASE/start.bat.original"
-gui_run "$D" "eula=yes,script=update"
-ok=1; has start.bat "-jar $SERVER_JAR nogui" && has start.bat "Xmx3G -XX:+UseG1GC" && cmp -s start.bat.backup "$BASE/start.bat.original" && ok=0
-result gui/script-updated $ok "start.bat: $(tr '\r\n' '  ' < start.bat)"
-ok=1; [ ! -e start-server.bat ] && ok=0
-result gui/no-extra-script $ok "a start-server.bat was made although start.bat exists"
+gui_run "$D" "eula=yes"
+ok=1; cmp -s start.bat "$BASE/start.bat.original" && [ -z "$(ls start.bat.* 2>/dev/null)" ] && has gui.log "still starts old-server.jar" && ok=0
+result gui/own-script-untouched $ok "start.bat: $(tr '\r\n' '  ' < start.bat)"
+ok=1; has start-useleess-carpet.bat "jdk8" && has start-useleess-carpet.bat "-jar $SERVER_JAR nogui" && ok=0
+result gui/script-created $ok "no start-useleess-carpet.bat next to the own start.bat"
 ok=1; has eula.txt "eula=true" && ok=0
 result gui/eula $ok "eula.txt not accepted"
 ok=1; wait_for logs/latest.log "Done (" 300 && ok=0
 result gui/server-started $ok "no server started from the window ($(tail -3 logs/latest.log 2>/dev/null | tr '\n' ' '))"
-ok=1; [ "$code" = 0 ] && gone "$LAUNCHER" && has gui.log "double-click start.bat" && ok=0
+ok=1; [ "$code" = 0 ] && gone "$LAUNCHER" && has gui.log "double-click start-useleess-carpet.bat" && ok=0
 result gui/installer-removed $ok "exit $code, installer still there"
 kill_servers_in "$D"
 
-# G2. an empty folder: start-server.bat is made, the server starts; then the made script starts it too
+# G2. an empty folder: start-useleess-carpet.bat is made, the server starts; then that script starts it too
 E="$BASE/gui-fresh"; mkdir -p "$E"
 gui_run "$E" "eula=yes"
-ok=1; has start-server.bat "jdk8" && has start-server.bat "-jar $SERVER_JAR nogui" && ok=0
-result gui/script-created $ok "start-server.bat: $(tr '\r\n' '  ' < start-server.bat 2>/dev/null)"
+ok=1; has start-useleess-carpet.bat "jdk8" && has start-useleess-carpet.bat "-jar $SERVER_JAR nogui" && ok=0
+result gui/script-created-fresh $ok "start-useleess-carpet.bat: $(tr '\r\n' '  ' < start-useleess-carpet.bat 2>/dev/null)"
 ok=1; wait_for logs/latest.log "Done (" 300 && ok=0
 result gui/server-started-fresh $ok "no server started from the window"
 kill_servers_in "$E"
 sleep 3
 rm -f logs/latest.log
 : > cmds2.txt
-tail -f cmds2.txt | cmd //c start-server.bat > bat.log 2>&1 &
+tail -f cmds2.txt | cmd //c start-useleess-carpet.bat > bat.log 2>&1 &
 PIDS="$! $PIDS"
 ok=1; wait_for logs/latest.log "Done (" 300 && ok=0
 printf 'stop\n\n' >> cmds2.txt
 n=0; while [ $n -lt 60 ] && ! has logs/latest.log "Stopping server"; do sleep 1; n=$((n + 1)); done
 has logs/latest.log "Stopping server" || ok=1
-result gui/start-script-works $ok "start-server.bat did not start and stop the server: $(tail -3 bat.log | tr '\n' ' ')"
+result gui/start-script-works $ok "start-useleess-carpet.bat did not start and stop the server: $(tail -3 bat.log | tr '\n' ' ')"
 kill_servers_in "$E"
 
-# G3. the EULA declined (and the own script kept): nothing started, nothing changed, the installer stays
+# G3. the EULA declined: nothing started, the own script unchanged, the installer stays
 F="$BASE/gui-declined"; mkdir -p "$F"
 cp "$BASE/start.bat.original" "$F/start.bat"
-gui_run "$F" "eula=no,script=keep"
+gui_run "$F" "eula=no"
 sleep 5
 ok=1; [ "$code" != 0 ] && ! has eula.txt "eula=true" && [ ! -e logs/latest.log ] && [ -e "$LAUNCHER" ] && has gui.log "was not started" && ok=0
 result gui/eula-declined $ok "exit $code"
 ok=1; cmp -s start.bat "$BASE/start.bat.original" && [ ! -e start.bat.backup ] && has gui.log "still starts old-server.jar" && ok=0
-result gui/script-kept $ok "start.bat was changed although Leave it was chosen"
+result gui/script-kept $ok "start.bat was changed"
 kill_servers_in "$F"
 
 echo "SCOPE TESTS ALL: $PASS passed, $FAIL failed, $SKIP skipped"
