@@ -8,3 +8,4 @@ ingame-jar/
 run-ingame/
 *.jar
 !mod/gradle/wrapper/gradle-wrapper.jar
+inputs/

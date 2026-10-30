@@ -1,0 +1,8 @@
+[
+ {
+  "_comment": "the master server jar (Kisde Carpet + Redstone Scope) from Redstone Scope's buildCarpetJar: sent fresh with every test-box run; a jar older than Redstone Scope's code stops the run/release (rebuild it there first)",
+  "from": "redstone-scope/mod/versions/1.12.2-carpet/Kisde-Carpet-server-1.12.2-RedstoneScope.jar",
+  "to": "inputs/master-1.12.2.jar",
+  "fresh": "redstone-scope/mod"
+ }
+]

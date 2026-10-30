@@ -38,12 +38,13 @@ test {
     testLogging { events 'failed'; exceptionFormat 'full' }
 }
 
-// The master server jar = Kisde Carpet (with Bullet + VasTech) + Redstone Scope, built by redstone-scope's
-// buildCarpetJar and copied to the shared toolchain/useleess-carpet/master-<mc>.jar (here and on the test box, where
-// this repo's copy sits one folder deeper). Override with -Pmaster=<jar>. Mojang's jar is downloaded from Mojang
-// into build/ if missing.
-def masterJar = file(project.findProperty('master') ?: ['../../toolchain', '../../../toolchain']
-        .collect { file("$it/useleess-carpet/master-${minecraft}.jar") }.find { it.isFile() } ?: '../../toolchain/useleess-carpet/master-1.12.2.jar')
+// The master server jar = Kisde Carpet (with Bullet + VasTech) + Redstone Scope, made by redstone-scope's
+// buildCarpetJar. Here: straight from there. In a test-box / release copy: ../inputs/master-<mc>.jar, sent fresh by the
+// release tools (../box-inputs.json, refused when older than Redstone Scope's code). Override with -Pmaster=<jar>.
+// Mojang's jar is downloaded from Mojang into build/ if missing.
+def masterJar = file(project.findProperty('master') ?: ["../inputs/master-${minecraft}.jar",
+        '../../redstone-scope/mod/versions/1.12.2-carpet/Kisde-Carpet-server-1.12.2-RedstoneScope.jar']
+        .collect { file(it) }.find { it.isFile() } ?: "../inputs/master-${minecraft}.jar")
 def vanillaJar = file(project.findProperty('vanilla') ?: "build/mojang/minecraft_server.${minecraft}.jar")
 def patchDir = layout.buildDirectory.dir('generated/patch')
 
