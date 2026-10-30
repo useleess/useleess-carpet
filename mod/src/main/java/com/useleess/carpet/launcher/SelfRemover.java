@@ -28,8 +28,11 @@ final class SelfRemover {
         }
     }
 
-    /** Removes {@code self} when it lies in {@code folder}; tells the player how to start the server from now on. */
-    static void remove(Path self, Path folder, Path serverJar, Downloader.Log log) {
+    /**
+     * Removes {@code self} when it lies in {@code folder}, then tells the player how to start the server from now on
+     * ({@code nextKey} with {@code nextArg}: the command line, or the start script to double-click).
+     */
+    static void remove(Path self, Path folder, Path serverJar, Downloader.Log log, String nextKey, Object nextArg) {
         if (self == null || self.equals(serverJar) || !folder.equals(self.toAbsolutePath().getParent())) return;
         try {
             Files.delete(self);
@@ -38,7 +41,7 @@ final class SelfRemover {
             deleteAfterExit(self);
             log.say("install.installer_removed_later", self.getFileName());
         }
-        log.say("install.next_start", serverJar.getFileName());
+        log.say(nextKey, nextArg);
     }
 
     private static void deleteAfterExit(Path self) {

@@ -10,24 +10,25 @@ One Carpet server jar for Minecraft **1.12.2** with everything in it:
 
 ## How to use
 
-1. Download `useleess-carpet-1.12.2-<version>.jar` from the releases page.
-2. Put it in your server folder and start it like a normal server jar:
+1. Download `useleess-carpet-1.12.2-<version>.jar` (the installer) from the releases page.
+2. Put it in your server folder (a new empty folder, or your existing 1.12.2 server folder).
+3. **Double-click it.** A window shows what it does:
+   - it downloads Mojang's official 1.12.2 server jar **from Mojang** and builds the Carpet server jar
+     `useleess-carpet-1.12.2-server.jar` in your server folder (temporary files, Mojang's jar included, are deleted);
+   - it finds Java 8 on your PC (also the one the Minecraft launcher installs);
+   - no start script in the folder: it makes `start-server.bat`. Your own `start.bat` (or `run.sh`, ...) is never
+     replaced: it asks whether to update it, and then changes only the jar name, after saving a backup
+     (`start.bat.backup`);
+   - it asks you to accept Mojang's EULA;
+   - it starts the server in its own window and deletes itself (it is not needed any more).
+4. **From then on, double-click `start-server.bat`** (or your updated start script).
 
-   ```
-   java -Xmx2G -jar useleess-carpet-1.12.2-<version>.jar nogui
-   ```
+To update, put the new installer in the server folder and double-click it once: it rebuilds the server jar.
 
-3. The first start downloads Mojang's official 1.12.2 server jar **from Mojang**, builds the Carpet server jar
-   `useleess-carpet-1.12.2-server.jar` in your server folder, deletes its temporary files (Mojang's jar included)
-   and starts the server. The downloaded installer jar is not needed any more and deletes itself (on Windows right
-   after the server stops).
-4. **From then on, start the server jar:**
-
-   ```
-   java -Xmx2G -jar useleess-carpet-1.12.2-server.jar nogui
-   ```
-
-   To update, download the new installer into the server folder and start it once: it rebuilds the server jar.
+Command line instead (hosts, panels): `java -Xmx2G -jar useleess-carpet-1.12.2-<version>.jar nogui` builds the
+server jar and starts the server in the same window; it does not change your scripts (it only tells you what to
+change) and makes `start-server.bat` / `start-server.sh` when there is none. From then on:
+`java -Xmx2G -jar useleess-carpet-1.12.2-server.jar nogui`.
 
 Java 8 is needed (like any 1.12.2 server).
 

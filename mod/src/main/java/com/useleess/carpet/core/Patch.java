@@ -183,7 +183,7 @@ public final class Patch {
         return files;
     }
 
-    static byte[] readFully(InputStream in) throws IOException {
+    public static byte[] readFully(InputStream in) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buf = new byte[65536];
         for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);

@@ -25,8 +25,15 @@ with Redstone Scope built in), then runs it in the same Java process. No Mojang 
 - `SelfRemover`: the launcher deletes its own jar when it lies in the server folder (user 2026-10-30: wasted space;
   from then on the server jar is started directly). Windows locks a running jar: a hidden `cmd` helper started from
   a shutdown hook deletes it right after the process ends.
-- `Main`: entry point. Normal start = `Installer.ensure`, `SelfRemover`, then run the server's main class in a child
-  class loader.
+- `Main`: entry point. Command line = `Installer.ensure`, `scripts` (make start-server.bat/.sh when there is no start
+  script; only name the change for the owner's own), `SelfRemover`, then the server's main class in a child class
+  loader. Double-click (no arguments, no console; `-Duseleess.carpet.gui=true` forces it) = `gui`: the installer
+  window, see below.
+- Double-click setup (user 2026-10-30): `Window` (Swing: progress lines, yes/no questions with our own button
+  names; tests answer through `-Duseleess.carpet.answers=eula=yes,script=update|keep`), `JavaFinder` (a Java 8:
+  this one, JAVA_HOME, install folders, the Minecraft launcher's jre-legacy, PATH; each asked for its version),
+  `StartScripts` (find the owner's scripts and their jar, update only the jar name after a backup, or make ours),
+  `Eula` (eula.txt). The server then runs as its own program (javaw, Minecraft's server window).
   `--install-only [file]` = only build the server jar (moved to `file` when given).
 - `Installer`: ONE file in the server folder, `useleess-carpet-<mc>-server.jar` (user 2026-10-30: no cache folder,
   no Mojang jar left behind). Mojang's jar goes to the temp folder `.useleess-carpet-temp/`, deleted afterwards (also

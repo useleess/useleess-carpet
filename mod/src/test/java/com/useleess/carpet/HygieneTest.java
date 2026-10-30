@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class HygieneTest {
     static final Path MAIN = Paths.get("src/main/java");
     static final Path TOOLS = Paths.get("src/tools/java");
-    static final Pattern KEY = Pattern.compile("\"((?:log|install|error)\\.[a-z_.]+|start|starting)\"");
+    static final Pattern KEY = Pattern.compile("\"((?:log|install|error|gui)\\.[a-z0-9_.]+|start|starting)\"");
 
     static List<Path> sources(Path root) throws IOException {
         try (Stream<Path> s = Files.walk(root)) {
@@ -59,7 +59,7 @@ class HygieneTest {
 
     @Test void noPlayerTextInLauncherCode() throws IOException {
         Pattern printLiteral = Pattern.compile("System\\.(out|err)\\.print(ln)?\\(\\s*\"");
-        Pattern problemText = Pattern.compile("new Problem\\((\\w+, )?\"(?!(log|install|error)\\.)");
+        Pattern problemText = Pattern.compile("new Problem\\((\\w+, )?\"(?!(log|install|error|gui)\\.)");
         for (Path p : sources(MAIN)) {
             String s = read(p);
             assertFalse(printLiteral.matcher(s).find(), p + " prints English text: use Messages");

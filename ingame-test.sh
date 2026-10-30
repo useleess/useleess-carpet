@@ -43,10 +43,19 @@ cleanup() {
     for p in $PIDS; do kill -9 "$p" 2>/dev/null; done
     # the "tail -f" feeding the console (started by this script only)
     for p in $(ps 2>/dev/null | awk -v me=$$ '$2 == me && /tail/ {print $1}'); do kill "$p" 2>/dev/null; done
+    # servers the installer window started on its own (detached): only ours, found by their folder
+    kill_servers_in "$BASE"
     sleep 1
     cd "$HERE" && rm -rf "$BASE"
 }
 trap cleanup EXIT
+
+# stops every Java whose command line names this folder (our own test servers only)
+kill_servers_in() {
+    command -v powershell >/dev/null 2>&1 || return 0
+    w="$(cygpath -w "$1" 2>/dev/null || echo "$1")"
+    powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='java.exe' or Name='javaw.exe'\" | Where-Object { \$_.CommandLine -like '*$w*' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }" 2>/dev/null
+}
 
 PASS=0; FAIL=0; SKIP=0
 wanted() {
@@ -59,14 +68,14 @@ result() {
     if ! wanted "$1"; then echo "SCOPE-TEST skip $1"; SKIP=$((SKIP + 1)); return; fi
     if [ "$2" = 0 ]; then echo "SCOPE-TEST pass $1"; PASS=$((PASS + 1)); else echo "SCOPE-TEST fail $1 $3"; FAIL=$((FAIL + 1)); fi
 }
-has() { grep -q "$2" "$1" 2>/dev/null; }
+has() { grep -q -e "$2" "$1" 2>/dev/null; }
 # wait_for <file> <text> <seconds>
 wait_for() {
     n=0
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 14"
+echo "SCOPE-TEST total 24"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -85,9 +94,10 @@ n=0; while [ $n -lt 30 ] && [ -e "$LAUNCHER" ]; do sleep 1; n=$((n + 1)); done
 ok=1; [ ! -e "$LAUNCHER" ] && has ../fresh-install.log "From now on start the server with" && ok=0
 result install/installer-removed $ok "the installer is still there after 30 s"
 
-# 1b. user 2026-10-30: the folder holds ONLY the server jar afterwards (no temp folder, no Mojang jar)
-left="$(ls -A)"
-ok=1; [ "$left" = "$SERVER_JAR" ] && ok=0
+# 1b. user 2026-10-30: the folder holds ONLY the server jar + the start script made for it (no temp folder, no
+# Mojang jar, no installer)
+left="$(ls -A | tr '\n' ' ')"
+ok=1; [ "$left" = "start-server.bat $SERVER_JAR " ] && has start-server.bat "$SERVER_JAR" && ok=0
 result install/clean $ok "the folder holds: $(echo $left)"
 
 # 2. the finished jar holds vanilla, Carpet (Bullet + Kisde + VasTech) and Redstone Scope
@@ -154,6 +164,65 @@ result server/stop $ok "the server did not stop and save"
 n=0; while [ $n -lt 30 ] && [ -e "$LAUNCHER" ]; do sleep 1; n=$((n + 1)); done
 ok=1; [ ! -e "$LAUNCHER" ] && [ -f "$SERVER_JAR" ] && has server.log "deleted as soon as this program closes" && ok=0
 result install/installer-removed-after-stop $ok "the installer is still there 30 s after the stop"
+
+# ---- double-click start (user 2026-10-30): the installer window, questions answered by the test ----
+# gui_run <folder> <answers>: the installer jar in that folder, its window forced on, exit code in $code
+gui_run() {
+    cd "$1" || exit 2
+    cp "$JAR" "$LAUNCHER"
+    cp "$A/$SERVER_JAR" .
+    "$JAVA" -Duseleess.carpet.gui=true -Duseleess.carpet.answers="$2" -jar "$LAUNCHER" > gui.log 2>&1; code=$?
+    sed 's/^/    gui: /' gui.log
+}
+gone() { n=0; while [ $n -lt 30 ] && [ -e "$1" ]; do sleep 1; n=$((n + 1)); done; [ ! -e "$1" ]; }
+
+# G1. an existing server with its own start.bat (own Java, own memory): updated after a backup, EULA, server starts
+D="$BASE/gui-existing"; mkdir -p "$D"
+printf '@echo off\r\n"C:\\Java8\\bin\\java.exe" -Xmx3G -XX:+UseG1GC -jar old-server.jar nogui\r\npause\r\n' > "$D/start.bat"
+cp "$D/start.bat" "$BASE/start.bat.original"
+gui_run "$D" "eula=yes,script=update"
+ok=1; has start.bat "-jar $SERVER_JAR nogui" && has start.bat "Xmx3G -XX:+UseG1GC" && cmp -s start.bat.backup "$BASE/start.bat.original" && ok=0
+result gui/script-updated $ok "start.bat: $(tr '\r\n' '  ' < start.bat)"
+ok=1; [ ! -e start-server.bat ] && ok=0
+result gui/no-extra-script $ok "a start-server.bat was made although start.bat exists"
+ok=1; has eula.txt "eula=true" && ok=0
+result gui/eula $ok "eula.txt not accepted"
+ok=1; wait_for logs/latest.log "Done (" 300 && ok=0
+result gui/server-started $ok "no server started from the window ($(tail -3 logs/latest.log 2>/dev/null | tr '\n' ' '))"
+ok=1; [ "$code" = 0 ] && gone "$LAUNCHER" && has gui.log "double-click start.bat" && ok=0
+result gui/installer-removed $ok "exit $code, installer still there"
+kill_servers_in "$D"
+
+# G2. an empty folder: start-server.bat is made, the server starts; then the made script starts it too
+E="$BASE/gui-fresh"; mkdir -p "$E"
+gui_run "$E" "eula=yes"
+ok=1; has start-server.bat "jdk8" && has start-server.bat "-jar $SERVER_JAR nogui" && ok=0
+result gui/script-created $ok "start-server.bat: $(tr '\r\n' '  ' < start-server.bat 2>/dev/null)"
+ok=1; wait_for logs/latest.log "Done (" 300 && ok=0
+result gui/server-started-fresh $ok "no server started from the window"
+kill_servers_in "$E"
+sleep 3
+rm -f logs/latest.log
+: > cmds2.txt
+tail -f cmds2.txt | cmd //c start-server.bat > bat.log 2>&1 &
+PIDS="$! $PIDS"
+ok=1; wait_for logs/latest.log "Done (" 300 && ok=0
+printf 'stop\n\n' >> cmds2.txt
+n=0; while [ $n -lt 60 ] && ! has logs/latest.log "Stopping server"; do sleep 1; n=$((n + 1)); done
+has logs/latest.log "Stopping server" || ok=1
+result gui/start-script-works $ok "start-server.bat did not start and stop the server: $(tail -3 bat.log | tr '\n' ' ')"
+kill_servers_in "$E"
+
+# G3. the EULA declined (and the own script kept): nothing started, nothing changed, the installer stays
+F="$BASE/gui-declined"; mkdir -p "$F"
+cp "$BASE/start.bat.original" "$F/start.bat"
+gui_run "$F" "eula=no,script=keep"
+sleep 5
+ok=1; [ "$code" != 0 ] && ! has eula.txt "eula=true" && [ ! -e logs/latest.log ] && [ -e "$LAUNCHER" ] && has gui.log "was not started" && ok=0
+result gui/eula-declined $ok "exit $code"
+ok=1; cmp -s start.bat "$BASE/start.bat.original" && [ ! -e start.bat.backup ] && has gui.log "still starts old-server.jar" && ok=0
+result gui/script-kept $ok "start.bat was changed although Leave it was chosen"
+kill_servers_in "$F"
 
 echo "SCOPE TESTS ALL: $PASS passed, $FAIL failed, $SKIP skipped"
 [ $FAIL = 0 ]
