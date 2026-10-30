@@ -21,7 +21,8 @@ import java.util.Properties;
 /**
  * The Useleess Carpet jar: run it like a normal server jar ({@code java -jar useleess-carpet.jar nogui}). It makes
  * sure the finished server jar sits in the server folder (built on this PC when missing or outdated, see
- * {@link Installer}) and starts it in the same Java process, passing all arguments on. {@code --install-only [file]}
+ * {@link Installer}), deletes itself when it lies in that folder ({@link SelfRemover}: from then on the server jar
+ * is started directly) and starts the server in the same Java process, passing all arguments on. {@code --install-only [file]}
  * only builds it (moved to {@code file} when given), for hosts, CarpetSP or other tools.
  */
 public final class Main {
@@ -41,13 +42,16 @@ public final class Main {
             patch = readPatch();
             v = VersionInfo.load(patch.minecraft);
             log.say("start", version, v.minecraft);
-            built = Installer.ensure(patch, v, Paths.get("").toAbsolutePath(), Downloader.HTTP, log);
+            Path folder = Paths.get("").toAbsolutePath();
+            built = Installer.ensure(patch, v, folder, Downloader.HTTP, log);
             if (args.length > 0 && args[0].equals(INSTALL_ONLY)) {
                 Path out = args.length > 1 ? Paths.get(args[1]).toAbsolutePath() : built;
                 if (!out.equals(built)) Files.move(built, out, StandardCopyOption.REPLACE_EXISTING);
                 log.say("install.written", out);
+                SelfRemover.remove(SelfRemover.selfJar(), folder, out, log);
                 return;
             }
+            SelfRemover.remove(SelfRemover.selfJar(), folder, built, log);
             log.say("starting", built.getFileName());
         } catch (Problem p) {
             System.err.println(m.get("log.prefix") + m.get(p));

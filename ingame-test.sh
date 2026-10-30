@@ -66,16 +66,24 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 12"
+echo "SCOPE-TEST total 14"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
 # 1. a fresh folder: downloads Mojang's jar from Mojang and builds the server jar into the folder
+# (the launcher sits IN the server folder, like a player's: it deletes itself afterwards)
 A="$BASE/fresh"; mkdir -p "$A"; cd "$A" || exit 2
-"$JAVA" -jar "$JAR" --install-only > ../fresh-install.log 2>&1; code=$?
+LAUNCHER="$(basename "$JAR")"
+cp "$JAR" "$LAUNCHER"
+"$JAVA" -jar "$LAUNCHER" --install-only > ../fresh-install.log 2>&1; code=$?
 cat ../fresh-install.log
 ok=1; has ../fresh-install.log "Downloading Mojang's official" && [ $code = 0 ] && [ -f "$SERVER_JAR" ] && ok=0
 result install/download $ok "exit $code, see the log above"
+
+# 1a. user 2026-10-30: the installer deletes itself (Windows: right after its Java process ends)
+n=0; while [ $n -lt 30 ] && [ -e "$LAUNCHER" ]; do sleep 1; n=$((n + 1)); done
+ok=1; [ ! -e "$LAUNCHER" ] && has ../fresh-install.log "From now on start the server with" && ok=0
+result install/installer-removed $ok "the installer is still there after 30 s"
 
 # 1b. user 2026-10-30: the folder holds ONLY the server jar afterwards (no temp folder, no Mojang jar)
 left="$(ls -A)"
@@ -100,12 +108,13 @@ result install/local-copy $ok "$(tr '\n' ' ' < install.log)"
 # 4..12. a real server from the launcher, reusing the jar built in step 1; the folder also holds 0.1.0's old cache
 C="$BASE/server"; mkdir -p "$C"; cd "$C" || exit 2
 cp "$A/$SERVER_JAR" .
+cp "$JAR" "$LAUNCHER"
 mkdir useleess-carpet && echo x > useleess-carpet/mojang-server-1.12.2.jar && echo x > useleess-carpet/useleess-carpet-0.1.0-1.12.2-server.jar
 PORT=$((26000 + ($$ % 4000)))
 echo "eula=true" > eula.txt
 printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=2\nsnooper-enabled=false\n' "$PORT" > server.properties
 : > cmds.txt
-tail -f cmds.txt | "$JAVA" -Xmx1G -jar "$JAR" nogui > server.log 2>&1 &
+tail -f cmds.txt | "$JAVA" -Xmx1G -jar "$LAUNCHER" nogui > server.log 2>&1 &
 PIDS="$! $PIDS"
 say() { printf '%s\n' "$1" >> cmds.txt; }
 wait_for server.log "is ready" 60; ok=$?
@@ -140,6 +149,11 @@ n=0; ok=1
 while [ $n -lt 90 ]; do has server.log "Stopping server" && [ -f world/level.dat ] && ! kill -0 "${PIDS%% *}" 2>/dev/null && { ok=0; break; }; sleep 1; n=$((n + 1)); done
 [ $ok = 0 ] || tail -15 server.log
 result server/stop $ok "the server did not stop and save"
+
+# the installer that started this server is deleted once the server has stopped (Windows keeps it locked until then)
+n=0; while [ $n -lt 30 ] && [ -e "$LAUNCHER" ]; do sleep 1; n=$((n + 1)); done
+ok=1; [ ! -e "$LAUNCHER" ] && [ -f "$SERVER_JAR" ] && has server.log "deleted as soon as this program closes" && ok=0
+result install/installer-removed-after-stop $ok "the installer is still there 30 s after the stop"
 
 echo "SCOPE TESTS ALL: $PASS passed, $FAIL failed, $SKIP skipped"
 [ $FAIL = 0 ]

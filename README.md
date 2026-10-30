@@ -19,8 +19,15 @@ One Carpet server jar for Minecraft **1.12.2** with everything in it:
 
 3. The first start downloads Mojang's official 1.12.2 server jar **from Mojang**, builds the Carpet server jar
    `useleess-carpet-1.12.2-server.jar` in your server folder, deletes its temporary files (Mojang's jar included)
-   and starts the server. Later starts use that jar straight away; it is built again only when it is missing,
-   damaged or from an older version. Keep starting the server with the jar you downloaded.
+   and starts the server. The downloaded installer jar is not needed any more and deletes itself (on Windows right
+   after the server stops).
+4. **From then on, start the server jar:**
+
+   ```
+   java -Xmx2G -jar useleess-carpet-1.12.2-server.jar nogui
+   ```
+
+   To update, download the new installer into the server folder and start it once: it rebuilds the server jar.
 
 Java 8 is needed (like any 1.12.2 server).
 
