@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * The installer window for a double-click start (user 2026-10-30: a double-clicked jar flashed a console and
  * vanished): its progress lines, the questions (EULA, start script) as buttons, and errors that stay visible. Tests
- * answer the questions through {@code -Duseleess.carpet.answers=eula=yes,script=update} instead of clicking.
+ * answer the question through {@code -Duseleess.carpet.answers=eula=yes} (or {@code no}) instead of clicking.
  */
 final class Window {
     private final Messages m;
@@ -107,7 +107,7 @@ final class Window {
 
     /** A yes/no question with our own button names; {@code name} is its answer key for tests ("yes"/"no"). */
     boolean ask(String name, String yesKey, String noKey, String questionKey, Object... args) {
-        if (answers.containsKey(name)) return answers.get(name).equals("yes") || answers.get(name).equals("update");
+        if (answers.containsKey(name)) return answers.get(name).equals("yes");
         AtomicInteger choice = new AtomicInteger(-1);
         try {
             SwingUtilities.invokeAndWait(() -> {

@@ -23,10 +23,6 @@ public final class Delta {
 
     private Delta() {}
 
-    public static byte[] make(byte[] base, byte[] target) {
-        return make(base, target, null, null);
-    }
-
     /** {@code dict} + {@code dictIndex} (from {@link #dictIndex}) may be null: then only {@code base} is copied from. */
     public static byte[] make(byte[] base, byte[] target, byte[] dict, Index dictIndex) {
         Index index = new Index(base, MIN_MATCH, 1);
@@ -76,10 +72,6 @@ public final class Delta {
         }
         insert(out, target, literalStart, target.length);
         return out.toByteArray();
-    }
-
-    public static byte[] apply(byte[] base, byte[] delta) throws IOException {
-        return apply(base, delta, new byte[0]);
     }
 
     public static byte[] apply(byte[] base, byte[] delta, byte[] dict) throws IOException {

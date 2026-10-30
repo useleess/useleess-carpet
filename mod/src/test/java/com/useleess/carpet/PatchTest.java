@@ -35,6 +35,15 @@ class PatchTest {
         return b;
     }
 
+    /** A delta without the Mojang dictionary (copies only from {@code base}). */
+    static byte[] make(byte[] base, byte[] target) {
+        return Delta.make(base, target, null, null);
+    }
+
+    static byte[] apply(byte[] base, byte[] delta) throws IOException {
+        return Delta.apply(base, delta, new byte[0]);
+    }
+
     static Path jar(Path file, Map<String, byte[]> files) throws IOException {
         try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(file))) {
             for (Map.Entry<String, byte[]> e : files.entrySet()) {
@@ -55,18 +64,18 @@ class PatchTest {
         System.arraycopy(random(2, 1000), 0, grown, 3000, 1000);
         System.arraycopy(base, 3000, grown, 4000, 2000);
         for (byte[] target : new byte[][]{base, edited, grown, new byte[0], random(3, 300), Arrays.copyOf(base, 11)}) {
-            assertArrayEquals(target, Delta.apply(base, Delta.make(base, target)));
+            assertArrayEquals(target, apply(base, make(base, target)));
         }
-        assertArrayEquals(new byte[0], Delta.apply(new byte[0], Delta.make(new byte[0], new byte[0])));
+        assertArrayEquals(new byte[0], apply(new byte[0], make(new byte[0], new byte[0])));
     }
 
     @Test void deltaOfSmallEditIsSmall() throws IOException {
         byte[] base = random(4, 20000);
         byte[] edited = base.clone();
         edited[5000] ^= 1;
-        assertTrue(Delta.make(base, edited).length < 40);
+        assertTrue(make(base, edited).length < 40);
         int inserted = 0;
-        for (byte[] run : Delta.insertedRuns(Delta.make(base, edited))) inserted += run.length;
+        for (byte[] run : Delta.insertedRuns(make(base, edited))) inserted += run.length;
         assertTrue(inserted <= 1, "only the changed byte is new");
     }
 
@@ -84,9 +93,9 @@ class PatchTest {
 
     @Test void brokenDeltaIsRefused() {
         byte[] base = random(7, 100);
-        byte[] d = Delta.make(base, random(8, 50));
-        assertThrows(IOException.class, () -> Delta.apply(base, Arrays.copyOf(d, d.length - 3)));
-        assertThrows(IOException.class, () -> Delta.apply(base, new byte[]{5, 'X'}));
+        byte[] d = make(base, random(8, 50));
+        assertThrows(IOException.class, () -> apply(base, Arrays.copyOf(d, d.length - 3)));
+        assertThrows(IOException.class, () -> apply(base, new byte[]{5, 'X'}));
     }
 
     Map<String, byte[]> vanillaFiles() {
@@ -191,7 +200,7 @@ class PatchTest {
         Path vanilla = jar(dir.resolve("v.jar"), v);
         // a patch that inserts the bytes itself (as an old format would): must be flagged
         Patch bad = new Patch("1.12.2", Hashes.sha1Hex(vanilla), java.util.Collections.singletonList(
-                new Patch.Entry("carpet/Leak.class", Patch.Kind.NEW, "", Delta.make(new byte[0], leaked), Hashes.sha1(leaked))));
+                new Patch.Entry("carpet/Leak.class", Patch.Kind.NEW, "", make(new byte[0], leaked), Hashes.sha1(leaked))));
         LeakCheck.Result r = LeakCheck.run(bad, v);
         assertFalse(r.clean(), r.toString());
         // the real maker copies that piece from Mojang's jar instead: clean
@@ -207,7 +216,7 @@ class PatchTest {
         System.arraycopy(v.get("a.class"), 100, data, 50, LeakCheck.RUN - 1);
         Path vanilla = jar(dir.resolve("v.jar"), v);
         Patch p = new Patch("1.12.2", Hashes.sha1Hex(vanilla), java.util.Collections.singletonList(
-                new Patch.Entry("carpet/Short.class", Patch.Kind.NEW, "", Delta.make(new byte[0], data), Hashes.sha1(data))));
+                new Patch.Entry("carpet/Short.class", Patch.Kind.NEW, "", make(new byte[0], data), Hashes.sha1(data))));
         assertTrue(LeakCheck.run(p, v).clean());
     }
 }
