@@ -19,11 +19,15 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /** The launcher's install step with a stand-in for the web (no game, no network). */
 class InstallerTest {
+    static final String SERVER = "useleess-carpet-1.12.2-server.jar";
     @TempDir Path dir;
     Path server;
     Path mojang;
@@ -62,41 +66,56 @@ class InstallerTest {
         };
     }
 
+    Path ensure(Downloader web) throws IOException {
+        return Installer.ensure(patch, v, server, web, log);
+    }
+
+    /** What the server folder holds (names, sub folders with a slash). */
+    TreeSet<String> folder() throws IOException {
+        try (Stream<Path> s = Files.list(server)) {
+            return s.map(p -> p.getFileName() + (Files.isDirectory(p) ? "/" : "")).collect(Collectors.toCollection(TreeSet::new));
+        }
+    }
+
     void assertIsMaster(Path built) throws IOException {
         Map<String, byte[]> got = Patch.readAll(built);
         Map<String, byte[]> want = Patch.readAll(master);
-        assertEquals(want.keySet(), got.keySet());
+        got.remove(Installer.STAMP);
+        assertEquals(new ArrayList<>(want.keySet()), new ArrayList<>(got.keySet()));
         for (String n : want.keySet()) assertArrayEquals(want.get(n), got.get(n), n);
     }
 
-    @Test void downloadsFromMojangAndBuilds() throws IOException {
-        Path built = Installer.ensure(patch, v, "0.1.0", server, serving(mojang), log);
+    @Test void downloadsFromMojangBuildsAndLeavesOnlyTheServerJar() throws IOException {
+        Path built = ensure(serving(mojang));
+        assertEquals(server.resolve(SERVER), built);
         assertIsMaster(built);
         assertEquals(Arrays.asList("https://one.example/s.jar"), fetched);
         assertTrue(said.contains("install.downloading") && said.contains("install.built"));
+        assertEquals(new TreeSet<>(Arrays.asList(SERVER)), folder(), "no temp folder, no Mojang jar left");
     }
 
-    @Test void secondStartReusesTheBuiltJar() throws IOException {
-        Path built = Installer.ensure(patch, v, "0.1.0", server, serving(mojang), log);
+    @Test void secondStartReusesTheServerJar() throws IOException {
+        Path built = ensure(serving(mojang));
         long time = Files.getLastModifiedTime(built).toMillis();
         said.clear();
         fetched.clear();
-        assertEquals(built, Installer.ensure(patch, v, "0.1.0", server, failing(), log));
+        assertEquals(built, ensure(failing()));
         assertEquals(time, Files.getLastModifiedTime(built).toMillis());
         assertTrue(fetched.isEmpty());
         assertEquals(Arrays.asList("install.ready_cached"), said);
     }
 
-    @Test void usesTheOwnersCopyInsteadOfDownloading() throws IOException {
+    @Test void usesTheOwnersCopyAndKeepsIt() throws IOException {
         Files.copy(mojang, server.resolve("minecraft_server.1.12.2.jar"));
-        assertIsMaster(Installer.ensure(patch, v, "0.1.0", server, failing(), log));
+        assertIsMaster(ensure(failing()));
         assertTrue(fetched.isEmpty());
         assertTrue(said.contains("install.using_local"));
+        assertEquals(new TreeSet<>(Arrays.asList(SERVER, "minecraft_server.1.12.2.jar")), folder(), "the owner's file stays");
     }
 
     @Test void ignoresAnOwnersCopyWithTheWrongHash() throws IOException {
         Files.write(server.resolve("minecraft_server.1.12.2.jar"), new byte[]{1, 2, 3});
-        assertIsMaster(Installer.ensure(patch, v, "0.1.0", server, serving(mojang), log));
+        assertIsMaster(ensure(serving(mojang)));
         assertEquals(1, fetched.size());
     }
 
@@ -106,29 +125,51 @@ class InstallerTest {
             fetched.add(url);
             Files.copy(url.contains("one") ? wrong : mojang, to, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         };
-        assertIsMaster(Installer.ensure(patch, v, "0.1.0", server, web, log));
+        assertIsMaster(ensure(web));
         assertEquals(2, fetched.size());
     }
 
-    @Test void noInternetGivesAClearProblem() {
-        Problem p = assertThrows(Problem.class, () -> Installer.ensure(patch, v, "0.1.0", server, failing(), log));
+    @Test void noInternetGivesAClearProblemAndLeavesNothing() throws IOException {
+        Problem p = assertThrows(Problem.class, () -> ensure(failing()));
         assertEquals("error.download_failed", p.key);
         assertEquals(2, fetched.size());
+        assertTrue(folder().isEmpty(), "the temp folder is removed after a failure too: " + folder());
     }
 
-    @Test void damagedCacheIsRebuilt() throws IOException {
-        Path built = Installer.ensure(patch, v, "0.1.0", server, serving(mojang), log);
-        Files.write(built.resolveSibling(built.getFileName() + ".ok"), "something else".getBytes());
+    @Test void damagedServerJarIsRebuilt() throws IOException {
+        Path built = ensure(serving(mojang));
+        Files.write(built, new byte[]{1, 2, 3});
         said.clear();
-        assertIsMaster(Installer.ensure(patch, v, "0.1.0", server, failing(), log));
+        assertIsMaster(ensure(serving(mojang)));
         assertTrue(said.contains("install.building"));
     }
 
-    @Test void newVersionReplacesTheOldBuild() throws IOException {
-        Path old = Installer.ensure(patch, v, "0.1.0", server, serving(mojang), log);
-        Path now = Installer.ensure(patch, v, "0.1.1", server, failing(), log);
-        assertNotEquals(old, now);
-        assertFalse(Files.exists(old), "the old build is deleted");
-        assertIsMaster(now);
+    @Test void serverJarFromAnotherPatchIsRebuilt() throws IOException {
+        // another launcher version with a different patch
+        Map<String, byte[]> m = Patch.readAll(master);
+        m.put("carpet/D.class", PatchTest.random(4, 300));
+        Patch other = PatchMaker.make("1.12.2", mojang, PatchTest.jar(dir.resolve("other.jar"), m));
+        Installer.ensure(other, v, server, serving(mojang), log);
+        said.clear();
+        assertIsMaster(ensure(serving(mojang)));
+        assertTrue(said.contains("install.building"));
+        assertEquals(new TreeSet<>(Arrays.asList(SERVER)), folder());
+    }
+
+    @Test void oldCacheFolderFrom010IsRemoved() throws IOException {
+        Path old = Files.createDirectories(server.resolve("useleess-carpet"));
+        Files.write(old.resolve("mojang-server-1.12.2.jar"), new byte[]{1});
+        Files.write(old.resolve("useleess-carpet-0.1.0-1.12.2-server.jar"), new byte[]{2});
+        Files.write(old.resolve("useleess-carpet-0.1.0-1.12.2-server.jar.ok"), new byte[]{3});
+        ensure(serving(mojang));
+        assertEquals(new TreeSet<>(Arrays.asList(SERVER)), folder());
+    }
+
+    @Test void oldCacheFolderWithSomethingElseInsideIsKept() throws IOException {
+        Path old = Files.createDirectories(server.resolve("useleess-carpet"));
+        Files.write(old.resolve("mojang-server-1.12.2.jar"), new byte[]{1});
+        Files.write(old.resolve("my-notes.txt"), new byte[]{2});
+        ensure(serving(mojang));
+        assertEquals(new TreeSet<>(Arrays.asList("my-notes.txt")), new TreeSet<>(Arrays.asList(old.toFile().list())));
     }
 }

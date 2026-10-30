@@ -66,34 +66,41 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 10"
+echo "SCOPE-TEST total 12"
+SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
-# 1. a fresh folder: downloads Mojang's jar from Mojang and writes the finished jar
+# 1. a fresh folder: downloads Mojang's jar from Mojang and builds the server jar into the folder
 A="$BASE/fresh"; mkdir -p "$A"; cd "$A" || exit 2
-"$JAVA" -jar "$JAR" --install-only built.jar > install.log 2>&1; code=$?
-cat install.log
-ok=1; has install.log "Downloading Mojang's official" && [ $code = 0 ] && [ -f built.jar ] && ok=0
+"$JAVA" -jar "$JAR" --install-only > ../fresh-install.log 2>&1; code=$?
+cat ../fresh-install.log
+ok=1; has ../fresh-install.log "Downloading Mojang's official" && [ $code = 0 ] && [ -f "$SERVER_JAR" ] && ok=0
 result install/download $ok "exit $code, see the log above"
 
+# 1b. user 2026-10-30: the folder holds ONLY the server jar afterwards (no temp folder, no Mojang jar)
+left="$(ls -A)"
+ok=1; [ "$left" = "$SERVER_JAR" ] && ok=0
+result install/clean $ok "the folder holds: $(echo $left)"
+
 # 2. the finished jar holds vanilla, Carpet (Bullet + Kisde + VasTech) and Redstone Scope
-"$JARTOOL" tf built.jar > files.txt 2>/dev/null
+"$JARTOOL" tf "$SERVER_JAR" > files.txt 2>/dev/null
 ok=0
 for f in net/minecraft/server/MinecraftServer.class carpet/CarpetSettings.class carpet/VastechRuleCheck.class carpet/KisdeRuleCheck.class com/redstonescope/; do
     has files.txt "^$f" || { ok=1; echo "missing in the built jar: $f"; }
 done
 result install/contents $ok "files missing"
 
-# 3. an owner's own copy of Mojang's jar is used instead of downloading
+# 3. an owner's own copy of Mojang's jar is used instead of downloading, and kept
 B="$BASE/owncopy"; mkdir -p "$B"; cd "$B" || exit 2
-cp "$A/useleess-carpet/mojang-server-1.12.2.jar" minecraft_server.1.12.2.jar
+curl -sSfL -o minecraft_server.1.12.2.jar https://piston-data.mojang.com/v1/objects/886945bfb2b978778c3a0288fd7fab09d315b25f/server.jar
 "$JAVA" -jar "$JAR" --install-only > install.log 2>&1; code=$?
-ok=1; has install.log "Using your own copy" && ! has install.log "Downloading" && [ $code = 0 ] && ok=0
+ok=1; has install.log "Using your own copy" && ! has install.log "Downloading" && [ $code = 0 ] && [ -f minecraft_server.1.12.2.jar ] && [ -f "$SERVER_JAR" ] && ok=0
 result install/local-copy $ok "$(tr '\n' ' ' < install.log)"
 
-# 4..10. a real server from the launcher, reusing the jar built in step 1 (copied cache)
+# 4..12. a real server from the launcher, reusing the jar built in step 1; the folder also holds 0.1.0's old cache
 C="$BASE/server"; mkdir -p "$C"; cd "$C" || exit 2
-cp -r "$A/useleess-carpet" .
+cp "$A/$SERVER_JAR" .
+mkdir useleess-carpet && echo x > useleess-carpet/mojang-server-1.12.2.jar && echo x > useleess-carpet/useleess-carpet-0.1.0-1.12.2-server.jar
 PORT=$((26000 + ($$ % 4000)))
 echo "eula=true" > eula.txt
 printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=2\nsnooper-enabled=false\n' "$PORT" > server.properties
@@ -101,9 +108,11 @@ printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\
 tail -f cmds.txt | "$JAVA" -Xmx1G -jar "$JAR" nogui > server.log 2>&1 &
 PIDS="$! $PIDS"
 say() { printf '%s\n' "$1" >> cmds.txt; }
-wait_for server.log "Server jar ready" 60; ok=$?
+wait_for server.log "is ready" 60; ok=$?
 has server.log "Building" && ok=1
 result install/cached $ok "the jar was not reused"
+ok=1; [ ! -e useleess-carpet ] && [ ! -e .useleess-carpet-temp ] && ok=0
+result install/old-folder $ok "0.1.0's useleess-carpet folder or a temp folder is still there"
 
 wait_for server.log "Done (" 300; ok=$?
 result server/boot $ok "no 'Done (' after 300 s: $(tail -5 server.log | tr '\n' ' ')"

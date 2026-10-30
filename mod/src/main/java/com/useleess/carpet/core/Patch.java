@@ -118,6 +118,14 @@ public final class Patch {
 
     /** Builds the finished jar from Mojang's jar; returns its {@link #digest()}. Fails on any mismatch. */
     public String apply(Path vanillaJar, Path outJar) throws IOException {
+        return apply(vanillaJar, outJar, null, null);
+    }
+
+    /**
+     * The same, plus one extra file {@code stampName} holding {@code stamp} at the end (the launcher marks its built
+     * jar with the patch fingerprint so a later start knows it is current); null = none.
+     */
+    public String apply(Path vanillaJar, Path outJar, String stampName, String stamp) throws IOException {
         String actual = Hashes.sha1Hex(vanillaJar);
         if (!actual.equals(vanillaSha1)) throw new Problem("error.wrong_vanilla", actual, vanillaSha1);
         Map<String, byte[]> vanilla = readAll(vanillaJar);
@@ -128,6 +136,11 @@ public final class Patch {
                 if (!Arrays.equals(Hashes.sha1(bytes), e.sha1)) throw new Problem("error.result_differs", e.name);
                 out.putNextEntry(new ZipEntry(e.name));
                 out.write(bytes);
+                out.closeEntry();
+            }
+            if (stamp != null) {
+                out.putNextEntry(new ZipEntry(stampName));
+                out.write(stamp.getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 out.closeEntry();
             }
         }

@@ -23,9 +23,11 @@ with Redstone Scope built in), then runs it in the same Java process. No Mojang 
 ## Launcher: `src/main/java/com/useleess/carpet/launcher`
 
 - `Main`: entry point. Normal start = `Installer.ensure` then run the server's main class in a child class loader.
-  `--install-only [file]` = only write the finished jar.
-- `Installer`: the cache folder `useleess-carpet/` next to the server: Mojang jar + finished jar + `.ok` marker
-  (patch fingerprint). Rebuilt when the marker does not match; older builds deleted.
+  `--install-only [file]` = only build the server jar (moved to `file` when given).
+- `Installer`: ONE file in the server folder, `useleess-carpet-<mc>-server.jar` (user 2026-10-30: no cache folder,
+  no Mojang jar left behind). Mojang's jar goes to the temp folder `.useleess-carpet-temp/`, deleted afterwards (also
+  on failure). The built jar holds the patch fingerprint in `META-INF/useleess-carpet.stamp`: same = reused,
+  missing/damaged/other = rebuilt. 0.1.0's `useleess-carpet/` cache folder is removed (only the files it made).
 
 ## Build-time tools (never shipped): `src/tools/java/com/useleess/carpet/tools`
 

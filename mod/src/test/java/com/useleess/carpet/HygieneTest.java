@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class HygieneTest {
     static final Path MAIN = Paths.get("src/main/java");
     static final Path TOOLS = Paths.get("src/tools/java");
-    static final Pattern KEY = Pattern.compile("\"((?:log|install|error)\\.[a-z_.]+|start)\"");
+    static final Pattern KEY = Pattern.compile("\"((?:log|install|error)\\.[a-z_.]+|start|starting)\"");
 
     static List<Path> sources(Path root) throws IOException {
         try (Stream<Path> s = Files.walk(root)) {

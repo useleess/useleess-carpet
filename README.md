@@ -17,15 +17,18 @@ One Carpet server jar for Minecraft **1.12.2** with everything in it:
    java -Xmx2G -jar useleess-carpet-1.12.2-<version>.jar nogui
    ```
 
-3. The first start downloads Mojang's official 1.12.2 server jar **from Mojang**, builds the Carpet server jar on
-   your PC and starts it. Later starts skip straight to the server.
+3. The first start downloads Mojang's official 1.12.2 server jar **from Mojang**, builds the Carpet server jar
+   `useleess-carpet-1.12.2-server.jar` in your server folder, deletes its temporary files (Mojang's jar included)
+   and starts the server. Later starts use that jar straight away; it is built again only when it is missing,
+   damaged or from an older version. Keep starting the server with the jar you downloaded.
 
 Java 8 is needed (like any 1.12.2 server).
 
 No internet on the server? Put Mojang's official `minecraft_server.1.12.2.jar` next to the launcher; it is used
 instead of downloading (checked by its fingerprint).
 
-Need the finished jar itself (for a host panel, CarpetSP or another tool)?
+Need only the finished jar (for a host panel, CarpetSP or another tool), without starting the server? It is
+written to `useleess-carpet-1.12.2-server.jar`, or to the file you name:
 
 ```
 java -jar useleess-carpet-1.12.2-<version>.jar --install-only my-carpet-server.jar

@@ -1,7 +1,7 @@
 {
  "_comment": "Test plan (user 2026-10-25: tests are built alongside the mod). Each feature needs at least `min` DIFFERENT in-game tests passing whose id starts with `prefix` (SCOPE-TEST pass <id>). A new feature = a new line here in the same change. Never lower a min or remove a line to get a push through. Useleess Carpet: launcher + patch for a 1.12.2 Carpet server; in-game = real servers from the launcher jar (ingame-test.sh, test box). Bulk tests are unit tests in mod/src/test.",
  "features": [
-  {"prefix": "install/", "min": 4, "what": "launcher install: download from Mojang, built jar contents, owner's own Mojang jar, cache reuse"},
+  {"prefix": "install/", "min": 6, "what": "launcher install: download from Mojang, folder left clean, built jar contents, owner's own Mojang jar kept, server jar reused, 0.1.0 folder removed"},
   {"prefix": "server/", "min": 6, "what": "server from the launcher: boot, VasTech / Kisde / Bullet rules, Redstone Scope loaded, clean stop"}
  ]
 }

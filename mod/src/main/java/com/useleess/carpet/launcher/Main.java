@@ -19,9 +19,10 @@ import java.util.Arrays;
 import java.util.Properties;
 
 /**
- * The Useleess Carpet jar: run it like a normal server jar ({@code java -jar useleess-carpet.jar nogui}). It builds
- * the finished server jar on this PC (see {@link Installer}) and starts it in the same Java process, passing all
- * arguments on. {@code --install-only [file]} only writes the finished jar (for hosts, CarpetSP or other tools).
+ * The Useleess Carpet jar: run it like a normal server jar ({@code java -jar useleess-carpet.jar nogui}). It makes
+ * sure the finished server jar sits in the server folder (built on this PC when missing or outdated, see
+ * {@link Installer}) and starts it in the same Java process, passing all arguments on. {@code --install-only [file]}
+ * only builds it (moved to {@code file} when given), for hosts, CarpetSP or other tools.
  */
 public final class Main {
     static final String PATCH = "/useleess-carpet/server.patch";
@@ -40,13 +41,14 @@ public final class Main {
             patch = readPatch();
             v = VersionInfo.load(patch.minecraft);
             log.say("start", version, v.minecraft);
-            built = Installer.ensure(patch, v, version, Paths.get("").toAbsolutePath(), Downloader.HTTP, log);
+            built = Installer.ensure(patch, v, Paths.get("").toAbsolutePath(), Downloader.HTTP, log);
             if (args.length > 0 && args[0].equals(INSTALL_ONLY)) {
-                Path out = Paths.get(args.length > 1 ? args[1] : "useleess-carpet-" + version + "-" + v.minecraft + "-server.jar");
-                Files.copy(built, out, StandardCopyOption.REPLACE_EXISTING);
-                log.say("install.written", out.toAbsolutePath());
+                Path out = args.length > 1 ? Paths.get(args[1]).toAbsolutePath() : built;
+                if (!out.equals(built)) Files.move(built, out, StandardCopyOption.REPLACE_EXISTING);
+                log.say("install.written", out);
                 return;
             }
+            log.say("starting", built.getFileName());
         } catch (Problem p) {
             System.err.println(m.get("log.prefix") + m.get(p));
             System.exit(1);
