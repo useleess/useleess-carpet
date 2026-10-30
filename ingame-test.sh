@@ -5,7 +5,8 @@
 #   FILTER=install/ ./ingame-test.sh     only tests whose id starts with one of these (comma separated)
 #
 # The launcher jar: $USELEESS_CARPET_JAR, else ingame-jar/useleess-carpet-*.jar (put there for a run on the test
-# box, which copies this folder without build/), else mod/build/libs/useleess-carpet-*.jar.
+# box, which copies this folder without build/), else mod/build/libs/useleess-carpet-*.jar, else it is built here
+# first (Java 21 from the toolchain; the master jar from toolchain/useleess-carpet, see mod/CODE_MAP.md).
 # Run on the test box:  "../discord-bot/.venv/Scripts/python.exe" ../discord-bot/testbox.py run . ingame-test.sh
 # Prints the SCOPE-TEST protocol and ends with "SCOPE TESTS ALL: P passed, F failed, S skipped"; exit code 0 only
 # when nothing failed. Everything happens in the throwaway folder run-ingame (own servers on 127.0.0.1, a free
@@ -20,7 +21,13 @@ JARTOOL="$T/jdk8/jdk8u504-b01/bin/jar"
 for a in "$@"; do case "$a" in FILTER=*) FILTER="${a#FILTER=}" ;; esac; done
 
 JAR="$USELEESS_CARPET_JAR"
-[ -n "$JAR" ] || JAR="$(ls "$HERE"/ingame-jar/useleess-carpet-*.jar "$HERE"/mod/build/libs/useleess-carpet-*.jar 2>/dev/null | head -1)"
+findjar() { ls "$HERE"/ingame-jar/useleess-carpet-*.jar "$HERE"/mod/build/libs/useleess-carpet-*.jar 2>/dev/null | head -1; }
+[ -n "$JAR" ] || JAR="$(findjar)"
+if [ -z "$JAR" ]; then
+    echo "no launcher jar yet: building it"
+    (cd mod && JAVA_HOME="$(ls -d "$T"/jdk21/*/ | head -1)" GRADLE_USER_HOME="$(cygpath -w "$T/gradle-home" 2>/dev/null || echo "$T/gradle-home")" ./gradlew -q jar) || { echo "NO RESULT: the build failed"; exit 1; }
+    JAR="$(findjar)"
+fi
 if [ ! -f "$JAR" ] || [ ! -x "$JAVA" ] && [ ! -x "$JAVA.exe" ]; then
     echo "launcher jar: '$JAR', java: $JAVA"
     echo "NO RESULT: no launcher jar or no Java 8"

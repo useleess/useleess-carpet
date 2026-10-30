@@ -10,11 +10,11 @@ One Carpet server jar for Minecraft **1.12.2** with everything in it:
 
 ## How to use
 
-1. Download `useleess-carpet-<version>-1.12.2.jar` from the releases page.
+1. Download `useleess-carpet-1.12.2-<version>.jar` from the releases page.
 2. Put it in your server folder and start it like a normal server jar:
 
    ```
-   java -Xmx2G -jar useleess-carpet-<version>-1.12.2.jar nogui
+   java -Xmx2G -jar useleess-carpet-1.12.2-<version>.jar nogui
    ```
 
 3. The first start downloads Mojang's official 1.12.2 server jar **from Mojang**, builds the Carpet server jar on
@@ -28,7 +28,7 @@ instead of downloading (checked by its fingerprint).
 Need the finished jar itself (for a host panel, CarpetSP or another tool)?
 
 ```
-java -jar useleess-carpet-<version>-1.12.2.jar --install-only my-carpet-server.jar
+java -jar useleess-carpet-1.12.2-<version>.jar --install-only my-carpet-server.jar
 ```
 
 ## Why a launcher instead of a server jar?

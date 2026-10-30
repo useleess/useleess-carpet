@@ -33,9 +33,10 @@ with Redstone Scope built in), then runs it in the same Java process. No Mojang 
   **LeakCheck** + a full rebuild compared file for file with the master jar. Any failure fails the build.
 - `LeakCheck`: no inserted run of 64+ bytes may appear anywhere in Mojang's jar.
 
-The master jar comes from Redstone Scope's `buildCarpetJar`
-(`../redstone-scope/mod/versions/1.12.2-carpet/Kisde-Carpet-server-1.12.2-RedstoneScope.jar`, override
-`-Pmaster=`). A new Redstone Scope / Kisde jar = rebuild this project.
+The master jar is `toolchain/useleess-carpet/master-1.12.2.jar` (override `-Pmaster=`): a copy of Redstone Scope's
+`buildCarpetJar` output (`redstone-scope/mod/versions/1.12.2-carpet/Kisde-Carpet-server-1.12.2-RedstoneScope.jar`).
+A new Redstone Scope / Kisde jar: copy it there AND to the test box
+(`discord-bot/testbox.py toolchain-put <jar> useleess-carpet`, file name master-1.12.2.jar), then release.
 
 ## Per-version layer
 

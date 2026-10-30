@@ -39,8 +39,11 @@ test {
 }
 
 // The master server jar = Kisde Carpet (with Bullet + VasTech) + Redstone Scope, built by redstone-scope's
-// buildCarpetJar. Override with -Pmaster=<jar>. Mojang's jar is downloaded from Mojang into build/ if missing.
-def masterJar = file(project.findProperty('master') ?: '../../redstone-scope/mod/versions/1.12.2-carpet/Kisde-Carpet-server-1.12.2-RedstoneScope.jar')
+// buildCarpetJar and copied to the shared toolchain/useleess-carpet/master-<mc>.jar (here and on the test box, where
+// this repo's copy sits one folder deeper). Override with -Pmaster=<jar>. Mojang's jar is downloaded from Mojang
+// into build/ if missing.
+def masterJar = file(project.findProperty('master') ?: ['../../toolchain', '../../../toolchain']
+        .collect { file("$it/useleess-carpet/master-${minecraft}.jar") }.find { it.isFile() } ?: '../../toolchain/useleess-carpet/master-1.12.2.jar')
 def vanillaJar = file(project.findProperty('vanilla') ?: "build/mojang/minecraft_server.${minecraft}.jar")
 def patchDir = layout.buildDirectory.dir('generated/patch')
 
@@ -67,8 +70,8 @@ processResources {
 }
 
 jar {
-    archiveBaseName = 'useleess-carpet'
-    archiveVersion = "${project.version}-${minecraft}"
+    // useleess-carpet-<mc>-<version>.jar: release.py keeps only jars ending in -<version>.jar
+    archiveBaseName = "useleess-carpet-${minecraft}"
     manifest { attributes 'Main-Class': 'com.useleess.carpet.launcher.Main', 'Implementation-Version': project.version }
     from(rootDir.parentFile) { include 'LICENSE', 'LICENSE-GPL', 'NOTICE.md' }
 }
