@@ -1,5 +1,10 @@
 # Useleess Carpet changelog
 
+## 0.1.4 - 2026-10-30
+
+- Behind the scenes: the build now always uses the newest Redstone Scope directly. Nothing changes for players;
+  install and use it exactly like 0.1.3.
+
 ## 0.1.3 - 2026-10-30
 
 - Double-click the installer: a window shows the progress, finds Java 8 on your PC (also the Minecraft launcher's
