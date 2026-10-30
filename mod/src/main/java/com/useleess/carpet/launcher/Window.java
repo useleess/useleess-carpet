@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 final class Window {
     private final Messages m;
+    private final Downloader.Log console;
     private final Map<String, String> answers = new HashMap<>();
     private JFrame frame;
     private JTextArea text;
@@ -36,8 +37,9 @@ final class Window {
     private JButton close;
     private JLabel highlight;
 
-    Window(Messages m) throws InterruptedException, InvocationTargetException {
+    Window(Messages m, Downloader.Log console) throws InterruptedException, InvocationTargetException {
         this.m = m;
+        this.console = console;
         String auto = System.getProperty("useleess.carpet.answers", "");
         for (String pair : auto.split(",")) {
             int eq = pair.indexOf('=');
@@ -82,12 +84,15 @@ final class Window {
         return !answers.isEmpty();
     }
 
+    /** Each line goes into the window and to the launcher's console output (logs, tests). */
     Downloader.Log log() {
-        return (key, args) -> line(m.get(key, args));
+        return (key, args) -> {
+            console.say(key, args);
+            line(m.get(key, args));
+        };
     }
 
-    void line(String s) {
-        System.out.println(m.get("log.prefix") + s);
+    private void line(String s) {
         SwingUtilities.invokeLater(() -> {
             text.append(s + "\n");
             text.setCaretPosition(text.getDocument().getLength());
@@ -96,7 +101,6 @@ final class Window {
 
     /** The one thing to remember, big and on top (user 2026-10-30: which script starts the server from now on). */
     void highlight(String s) {
-        line(s);
         SwingUtilities.invokeLater(() -> {
             highlight.setText("<html>" + s.replace("&", "&amp;").replace("<", "&lt;") + "</html>");
             highlight.setVisible(true);

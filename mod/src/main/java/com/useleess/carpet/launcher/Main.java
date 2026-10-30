@@ -34,12 +34,13 @@ public final class Main {
 
     public static void main(String[] args) throws Throwable {
         Messages m = Messages.load();
+        // the launcher's only console output (the window's lines go here too)
+        Downloader.Log log = (key, a) -> System.out.println(m.get("log.prefix") + m.get(key, a));
         if (Boolean.getBoolean("useleess.carpet.gui")
                 || args.length == 0 && System.console() == null && !java.awt.GraphicsEnvironment.isHeadless()) {
-            gui(m);
+            gui(m, log);
             return;
         }
-        Downloader.Log log = (key, a) -> System.out.println(m.get("log.prefix") + m.get(key, a));
         Path built;
         VersionInfo v;
         try {
@@ -91,8 +92,8 @@ public final class Main {
      * (the owner's own are never changed), asks for the EULA, starts the server in Minecraft's own server window as
      * a separate program, then shows in a highlighted box which script to double-click from now on.
      */
-    static void gui(Messages m) throws Exception {
-        Window w = new Window(m);
+    static void gui(Messages m, Downloader.Log console) throws Exception {
+        Window w = new Window(m, console);
         Downloader.Log log = w.log();
         try {
             Patch patch = readPatch();
@@ -122,13 +123,14 @@ public final class Main {
                     .directory(folder.toFile()).redirectInput(nul).redirectOutput(nul).redirectError(nul).start();
             log.say("gui.server_started");
             SelfRemover.remove(SelfRemover.selfJar(), folder, built, log, null, null);
+            log.say("gui.next_start", script.getFileName());
             w.highlight(m.get("gui.next_start", script.getFileName()));
             w.finish(true);
         } catch (Problem p) {
-            w.line(m.get(p));
+            log.say(p.key, p.args);
             w.finish(false);
         } catch (IOException e) {
-            w.line(m.get("gui.failed", e.toString()));
+            log.say("gui.failed", e.toString());
             w.finish(false);
         }
     }
