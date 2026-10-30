@@ -1,5 +1,14 @@
 # Useleess Carpet changelog
 
+## 0.1.3 - 2026-10-30
+
+- Double-click the installer: a window shows the progress, finds Java 8 on your PC (also the Minecraft launcher's
+  own), asks you to accept Mojang's EULA and starts the server in its own window. Before, a double-click only
+  flashed a console window.
+- Start script: the installer makes `start-useleess-carpet.bat`; double-click that from then on (the window shows
+  it in a big yellow box and stays open until you close it). Your own `start.bat` (or `run.sh`, ...) is never
+  changed; the installer only tells you it still starts the old jar.
+
 ## 0.1.2 - 2026-10-30
 
 - The installer deletes itself once the server jar is built (on Windows right after the server stops): it is not
