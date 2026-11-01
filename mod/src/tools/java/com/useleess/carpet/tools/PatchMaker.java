@@ -19,11 +19,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Build-time tool (never shipped): makes the patch from Mojang's server jar and our master server jar (Kisde Carpet,
- * which carries Bullet + VasTech, with Redstone Scope built in), then proves it: applying it to Mojang's jar gives
- * the master jar file for file, and it carries no run of {@value LeakCheck#RUN} or more bytes from Mojang's files.
+ * Build-time tool (never shipped): makes the patch from Mojang's server jar and our rules jar ({@link RulesMaker}:
+ * the master server jar - Kisde Carpet, which carries Bullet + VasTech, with Redstone Scope built in - plus our own
+ * rules), then proves it: applying it to Mojang's jar gives the rules jar file for file, and it carries no run of
+ * {@value LeakCheck#RUN} or more bytes from Mojang's files.
  *
- * <pre>PatchMaker &lt;minecraft version&gt; &lt;mojang jar (downloaded if missing)&gt; &lt;master jar&gt; &lt;out patch&gt;</pre>
+ * <pre>PatchMaker &lt;minecraft version&gt; &lt;mojang jar (downloaded if missing)&gt; &lt;rules jar&gt; &lt;out patch&gt;</pre>
  */
 public final class PatchMaker {
     private PatchMaker() {}
@@ -44,7 +45,7 @@ public final class PatchMaker {
             patch.write(o);
         }
         verify(out, vanilla, master);
-        System.out.println("patch OK: " + out + " (" + Files.size(out) + " bytes), rebuilds the master jar exactly");
+        System.out.println("patch OK: " + out + " (" + Files.size(out) + " bytes), rebuilds the rules jar exactly");
     }
 
     public static Patch make(String minecraft, Path vanillaJar, Path masterJar) throws IOException {
@@ -71,7 +72,7 @@ public final class PatchMaker {
         return new Patch(minecraft, Hashes.sha1Hex(vanillaJar), entries);
     }
 
-    /** Applies the written patch to Mojang's jar and compares the result with the master jar, file for file. */
+    /** Applies the written patch to Mojang's jar and compares the result with the rules jar, file for file. */
     public static void verify(Path patchFile, Path vanillaJar, Path masterJar) throws IOException {
         Patch patch;
         try (java.io.InputStream in = Files.newInputStream(patchFile)) {

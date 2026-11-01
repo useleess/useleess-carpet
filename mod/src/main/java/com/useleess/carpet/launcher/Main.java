@@ -56,14 +56,14 @@ public final class Main {
                 log.say("install.written", out);
                 if (folder.equals(out.getParent())) {
                     Path ours = scripts(folder, out, java, log);
-                    SelfRemover.remove(SelfRemover.selfJar(), folder, out, log, "install.next_start", ours.getFileName());
+                    SelfRemover.remove(SelfRemover.selfJar(), folder, out, log, "install.next_start_script", ours.getFileName());
                 } else {
                     SelfRemover.remove(SelfRemover.selfJar(), folder, out, log, "install.next_start", out.getFileName());
                 }
                 return;
             }
             Path ours = scripts(folder, built, java, log);
-            SelfRemover.remove(SelfRemover.selfJar(), folder, built, log, "install.next_start", ours.getFileName());
+            SelfRemover.remove(SelfRemover.selfJar(), folder, built, log, "install.next_start_script", ours.getFileName());
             log.say("starting", built.getFileName());
         } catch (Problem p) {
             System.err.println(m.get("log.prefix") + m.get(p));

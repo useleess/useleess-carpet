@@ -63,6 +63,14 @@ wanted() {
     for f in $(echo "$FILTER" | tr ',' ' '); do case "$1" in "$f"*) return 0 ;; esac; done
     return 1
 }
+# section <id prefix>...: a part of this script runs only when FILTER can want one of its tests
+section() {
+    [ -z "$FILTER" ] && return 0
+    for p in "$@"; do
+        for f in $(echo "$FILTER" | tr ',' ' '); do case "$p" in "$f"*) return 0 ;; esac; case "$f" in "$p"*) return 0 ;; esac; done
+    done
+    return 1
+}
 # result <id> <ok 0/1> <why>
 result() {
     if ! wanted "$1"; then echo "SCOPE-TEST skip $1"; SKIP=$((SKIP + 1)); return; fi
@@ -75,7 +83,7 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 24"
+echo "SCOPE-TEST total 29"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -115,18 +123,42 @@ curl -sSfL -o minecraft_server.1.12.2.jar https://piston-data.mojang.com/v1/obje
 ok=1; has install.log "Using your own copy" && ! has install.log "Downloading" && [ $code = 0 ] && [ -f minecraft_server.1.12.2.jar ] && [ -f "$SERVER_JAR" ] && ok=0
 result install/local-copy $ok "$(tr '\n' ' ' < install.log)"
 
+PORT=$((26000 + ($$ % 4000)))
+say() { printf '%s\n' "$1" >> cmds.txt; }
+# ask <command> <answer pattern> [<refusal pattern>]: the server console's answer (cmds.txt / server.log of the
+# current folder); 0 = answered with the pattern, 1 = refused, 2 = no answer within ASK_TRIES half seconds (20 s)
+ASK_TRIES=40
+ask() {
+    before=$(wc -l < server.log)
+    say "$1"
+    n=0
+    while [ $n -lt "$ASK_TRIES" ]; do
+        got="$(tail -n +"$((before + 1))" server.log)"
+        echo "$got" | grep -qE "$2" && return 0
+        [ -n "$3" ] && echo "$got" | grep -qE "$3" && return 1
+        sleep 0.5; n=$((n + 1))
+    done
+    return 2
+}
+# until_ok <seconds> <ask args>: asks again every second until the answer comes; the seconds are real time (the clock),
+# however long each ask takes
+until_ok() {
+    t=$1; shift; end=$(($(date +%s) + t))
+    while [ "$(date +%s)" -lt "$end" ]; do ask "$@" && return 0; sleep 1; done
+    return 1
+}
+
 # 4..12. a real server from the launcher, reusing the jar built in step 1; the folder also holds 0.1.0's old cache
+if section install/ server/; then
 C="$BASE/server"; mkdir -p "$C"; cd "$C" || exit 2
 cp "$A/$SERVER_JAR" .
 cp "$JAR" "$LAUNCHER"
 mkdir useleess-carpet && echo x > useleess-carpet/mojang-server-1.12.2.jar && echo x > useleess-carpet/useleess-carpet-0.1.0-1.12.2-server.jar
-PORT=$((26000 + ($$ % 4000)))
 echo "eula=true" > eula.txt
 printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=2\nsnooper-enabled=false\n' "$PORT" > server.properties
 : > cmds.txt
 tail -f cmds.txt | "$JAVA" -Xmx1G -jar "$LAUNCHER" nogui > server.log 2>&1 &
 PIDS="$! $PIDS"
-say() { printf '%s\n' "$1" >> cmds.txt; }
 wait_for server.log "is ready" 60; ok=$?
 has server.log "Building" && ok=1
 result install/cached $ok "the jar was not reused"
@@ -164,8 +196,122 @@ result server/stop $ok "the server did not stop and save"
 n=0; while [ $n -lt 30 ] && [ -e "$LAUNCHER" ]; do sleep 1; n=$((n + 1)); done
 ok=1; [ ! -e "$LAUNCHER" ] && [ -f "$SERVER_JAR" ] && has server.log "deleted as soon as this program closes" && ok=0
 result install/installer-removed-after-stop $ok "the installer is still there 30 s after the stop"
+fi
+
+# ---- our own Carpet rules (OurRules in mod/src/tools): a server of their own, started from the built server jar ----
+if section rules/; then
+R="$BASE/rules"; mkdir -p "$R"; cd "$R" || exit 2
+cp "$A/$SERVER_JAR" .
+echo "eula=true" > eula.txt
+printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=4\nsnooper-enabled=false\nspawn-monsters=false\n' "$((PORT + 1))" > server.properties
+# rules_server: starts it (again) and waits for "Done ("
+rules_server() {
+    : > cmds.txt; : > server.log
+    tail -f cmds.txt | "$JAVA" -Xmx1G -jar "$SERVER_JAR" nogui > server.log 2>&1 &
+    PIDS="$! $PIDS"
+    wait_for server.log "Done (" 300 || { echo "rules server did not start: $(tail -5 server.log | tr '\n' ' ')"; return 1; }
+}
+rules_stop() {
+    say "stop"
+    n=0; while [ $n -lt 60 ] && kill -0 "${PIDS%% *}" 2>/dev/null; do sleep 1; n=$((n + 1)); done
+    kill -9 "${PIDS%% *}" 2>/dev/null
+}
+# the section's server and the "tail -f" feeding its console end with the section, also after a failure
+rules_end() {
+    rules_stop
+    for p in $(ps 2>/dev/null | awk -v me=$$ '$2 == me && /tail/ {print $1}'); do kill "$p" 2>/dev/null; done
+}
+RULE=endPortalNoTeleportPlayer
+NOTFOUND="found nothing|cannot be found|No entity|not found|did not match"
+# the whole section ends by this clock time; every wait below is also short on its own and says why it gave up
+RULES_END=$(($(date +%s) + 300))
+ASK_TRIES=12
+rules_late() { [ "$(date +%s)" -ge "$RULES_END" ]; }
+# where UcStay is, for the failure text: the console's answer to a tp onto its own spot, and whether it is in the End
+ucstay_where() {
+    ask "testfor @a[name=UcStay]" "Found UcStay" "$NOTFOUND"; any=$?
+    ask "testfor UcStay {Dimension:1}" "Found UcStay" "$NOTFOUND|Unknown|rror"; dim=$?
+    ask "execute UcStay ~ ~ ~ tp UcStay ~ ~ ~" "Teleported" "$NOTFOUND|rror"
+    pos="$(tail -n 4 server.log | grep 'Teleported' | tail -n 1 | sed 's/.*Teleported/Teleported/')"
+    echo "UcStay online: $([ "$any" = 0 ] && echo yes || echo no); in the End: $([ "$dim" = 0 ] && echo yes || echo no); ${pos:-no position answer}; server log: $(grep -v -E 'Found |found nothing' server.log | tail -n 14 | tr '
+' ' ')"
+}
+rules_server
+
+ok=1; ask "carpet $RULE" "$RULE" && sleep 1 && tail -n 8 server.log | grep -q "false" && ask "carpet list" "$RULE" && ok=0
+tail -n 12 server.log | sed 's/^/    rules: /'
+result rules/listed $ok "carpet $RULE / carpet list did not show it with false"
+
+# a fake player standing in an end portal block (on the grass of the flat world), the rule on; then a dropped item
+# nobody can pick up: once the item has left the Overworld, the portal has worked on everything in it.
+# Each step waits for the one before: rule on -> block placed -> player joined -> player in the world -> teleported
+# into the block and seen there -> item seen -> item gone.
+why=""
+in_portal="testfor @a[name=UcStay,x=2,y=4,z=2,dx=0,dy=0,dz=0]"
+item_ow="testfor @e[type=item,x=0,y=0,z=0,r=100]"
+step=1
+ask "carpet $RULE true" "$RULE" || why="the rule did not answer to carpet $RULE true"
+if [ -z "$why" ]; then
+    ask "carpet $RULE" "$RULE" && sleep 1 && tail -n 8 server.log | grep -q "true" || why="the rule is not true after carpet $RULE true: $(tail -n 8 server.log | tr '
+' ' ')"
+fi
+if [ -z "$why" ]; then
+    say "player UcStay spawn"
+    wait_for server.log "UcStay joined" 60 || why="player UcStay did not join within 60 s (no 'UcStay joined'): $(tail -n 4 server.log | tr '
+' ' ')"
+fi
+# the fake player joins at 0, 0, 0 (inside the flat world's bedrock) and falls out of the world within seconds: tp it
+# the moment it has joined, then creative mode (no fall damage from the drop before the tp), then wait to see it
+[ -z "$why" ] && { say "tp UcStay 2.5 4 2.5"; say "gamemode creative UcStay"; until_ok 15 "$in_portal" "Found UcStay" "$NOTFOUND" || why="UcStay was never seen in the portal block after tp ($(ucstay_where))"; }
+# the block is placed only now: before a player is there the chunk is not loaded ("Cannot place block outside of the
+# world", seen on the box) - and the player is already standing where it appears
+[ -z "$why" ] && { until_ok 20 "setblock 2 4 2 minecraft:end_portal" "Block placed" "Cannot place|$NOTFOUND" || why="the end portal block could not be placed: $(tail -n 3 server.log | tr '
+' ' ')"; }
+[ -z "$why" ] && { until_ok 10 "testforblock 2 4 2 minecraft:end_portal" "Successfully found" "$NOTFOUND|not a valid|is not" || why="no end portal block at 2 4 2 after setblock"; }
+if [ -z "$why" ]; then
+    say "summon item 2.5 4.6 2.5 {Item:{id:\"minecraft:stone\",Count:1b},PickupDelay:32767}"
+    until_ok 10 "$item_ow" "Found " "$NOTFOUND" || why="the dropped item was never seen in the Overworld"
+fi
+gone=1
+if [ -z "$why" ]; then
+    # the first trip into the End also generates it (can take 1 min on a busy box)
+    end=$(($(date +%s) + 100))
+    while [ "$(date +%s)" -lt "$end" ] && ! rules_late; do ask "$item_ow" "Found " "$NOTFOUND"; [ $? = 1 ] && { gone=0; break; }; sleep 1; done
+fi
+if [ $gone = 0 ]; then result rules/end-portal-items-still-go 0 ""
+else result rules/end-portal-items-still-go 1 "${why:-the item stayed in the Overworld for 100 s ($(ucstay_where))}"; fi
+
+ok=1
+if [ $gone = 0 ]; then
+    ask "$in_portal" "Found UcStay" "$NOTFOUND" && ok=0
+    [ $ok = 0 ] || why="the player left the end portal block while $RULE was true ($(ucstay_where))"
+fi
+result rules/end-portal-player-stays $ok "${why:-the player left the end portal block while $RULE was true}"
+
+# the same player, still in the portal: the rule off sends it to the End (found anywhere, not in the Overworld)
+ok=1
+if [ -z "$why" ] || [ $gone = 0 ]; then
+    ask "carpet $RULE false" "$RULE"
+    end=$(($(date +%s) + 40))
+    while [ "$(date +%s)" -lt "$end" ] && ! rules_late; do
+        ask "testfor @a[name=UcStay,x=0,y=0,z=0,r=100000]" "Found UcStay" "$NOTFOUND"
+        [ $? = 1 ] && ask "testfor @a[name=UcStay]" "Found UcStay" "$NOTFOUND" && { ok=0; break; }
+        sleep 1
+    done
+fi
+[ $ok = 0 ] || why="the player did not reach the End within 40 s with $RULE false ($(ucstay_where))"
+result rules/end-portal-player-goes-off $ok "$why"
+
+# saved for the world: carpet setDefault writes carpet.conf, a restart reads it back
+ask "carpet setDefault $RULE true" "$RULE"
+rules_stop
+ok=1; grep -rq "$RULE true" --include=carpet.conf . && rules_server && ask "carpet $RULE" "$RULE" && sleep 1 && tail -n 8 server.log | grep -q "true" && ok=0
+result rules/saved-in-carpet-conf $ok "$RULE was not true after setDefault + restart ($(cat */carpet.conf 2>/dev/null | tr '\n' ' '))"
+rules_end
+fi
 
 # ---- double-click start (user 2026-10-30): the installer window, questions answered by the test ----
+if section gui/; then
 # gui_run <folder> <answers>: the installer jar in that folder, its window forced on, exit code in $code
 gui_run() {
     cd "$1" || exit 2
@@ -223,6 +369,7 @@ result gui/eula-declined $ok "exit $code"
 ok=1; cmp -s start.bat "$BASE/start.bat.original" && [ ! -e start.bat.backup ] && has gui.log "still starts old-server.jar" && ok=0
 result gui/script-kept $ok "start.bat was changed"
 kill_servers_in "$F"
+fi
 
 echo "SCOPE TESTS ALL: $PASS passed, $FAIL failed, $SKIP skipped"
 [ $FAIL = 0 ]

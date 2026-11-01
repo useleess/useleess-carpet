@@ -43,8 +43,18 @@ with Redstone Scope built in), then runs it in the same Java process. No Mojang 
 
 ## Build-time tools (never shipped): `src/tools/java/com/useleess/carpet/tools`
 
-- `PatchMaker`: Gradle task `makePatch`: Mojang jar (downloaded into `build/mojang/`) + master jar -> patch, then
-  **LeakCheck** + a full rebuild compared file for file with the master jar. Any failure fails the build.
+Flow: master jar -> `makeRules` -> rules jar (`build/rules/rules-<mc>.jar`) -> `makePatch` -> patch in the launcher.
+
+- `OurRules`: the table of our own Carpet rules (name, default, Carpet's English description, categories).
+- `RulesMaker`: Gradle task `makeRules` (ASM, build-time only): master jar + every `OurRules` line = the rules jar.
+  Each rule becomes a `@Rule` `public static boolean` of `carpet/CarpetSettings` (default set at the start of its
+  `<clinit>`), so `/carpet`, `carpet.conf` and CarpetSP treat it like Carpet's own. Its hook comes from the
+  per-version data `src/tools/resources/useleess-carpet/rules/<mc>.properties` (obfuscated names, checked against
+  MCP's `obf_to_srg.tsrg`): `<rule>.method` = the method, `<rule>.skipFor` = "return at its start while the rule is on
+  and this local is an instance of that class". A missing data line, class, method, category or Carpet annotation
+  fails the build with its name.
+- `PatchMaker`: Gradle task `makePatch`: Mojang jar (downloaded into `build/mojang/`) + rules jar -> patch, then
+  **LeakCheck** + a full rebuild compared file for file with the rules jar. Any failure fails the build.
 - `LeakCheck`: no inserted run of 64+ bytes may appear anywhere in Mojang's jar.
 
 The master jar is Redstone Scope's `buildCarpetJar` output
@@ -56,18 +66,30 @@ run/release. No hand-made copies (user 2026-10-30). Override with `-Pmaster=`.
 ## Per-version layer
 
 Only data: `src/main/resources/useleess-carpet/minecraft/<version>.properties` (Mojang jar SHA-1, Mojang URLs, local
-file names, main class) + `def minecraft` and the master jar path in `build.gradle`.
+file names, main class), `src/tools/resources/useleess-carpet/rules/<version>.properties` (our rules' hooks) +
+`def minecraft` and the master jar path in `build.gradle`.
+
+### Adding a rule
+
+1. One line in `OurRules.ALL` (name, default, description, categories from `CarpetSettings$RuleCategory`).
+2. Its hook lines in every `rules/<version>.properties` (a new kind of hook = a new method in `RulesMaker`).
+3. Tests: `RulesTest` covers every table line; add in-game tests under `rules/` in `../ingame-test.sh` and raise
+   the `rules/` min in `../test-plan.json`; a line in `../README.md` (our rules) and `../UNRELEASED.md`.
 
 ### Adding a Minecraft version
 
-1. Add `<version>.properties` (SHA-1 + URL from Mojang's version manifest, piston-meta.mojang.com).
+1. Add `<version>.properties` (SHA-1 + URL from Mojang's version manifest, piston-meta.mojang.com) and
+   `src/tools/resources/useleess-carpet/rules/<version>.properties` (our rules' hooks in that version's names).
 2. Build with `-Pmaster=<that version's master jar>` and the new `minecraft` value (one jar per version).
 3. Add the version to `ingame-test.sh` checks if its files differ.
 
 ## Tests
 
 - Unit (`src/test`, run by `gradlew build`, no game): `PatchTest` (delta, format, leak check), `InstallerTest`
-  (download / own copy / cache / mirrors / no internet with a stand-in web), `HygieneTest` (language keys, no
+  (download / own copy / cache / mirrors / no internet with a stand-in web), `RulesTest` (every rule a Carpet field
+with its default, the hook at the method's start, a missing target fails the build; reads `build/rules/`), `HygieneTest` (language keys, no
   English in code, version data, no copied code blocks).
 - In-game (`../ingame-test.sh`, test box): the real launcher jar on real servers: download from Mojang, contents,
   own copy, cache reuse, boot, one rule each of VasTech / Kisde / Bullet, Redstone Scope loaded, clean stop.
+  `rules/`: our rules on their own server (listed with its default, a Carpet fake player in an end portal stays /
+  goes, items still go, `carpet setDefault` kept over a restart). `FILTER=` skips the parts it does not need.

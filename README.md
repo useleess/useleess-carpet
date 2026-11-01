@@ -41,6 +41,16 @@ written to `useleess-carpet-1.12.2-server.jar`, or to the file you name:
 java -jar useleess-carpet-1.12.2-<version>.jar --install-only my-carpet-server.jar
 ```
 
+## Our own Carpet rules
+
+Next to the rules of Carpet, Bullet, Kisde and VasTech, Useleess Carpet adds its own. They work like any other Carpet
+rule: `/carpet <rule>`, `/carpet list`, `/carpet setDefault <rule> <value>` (saved in the world's `carpet.conf`) and
+CarpetSP's rule screen.
+
+| Rule | Default | What it does |
+|---|---|---|
+| `endPortalNoTeleportPlayer` | false | Players touching an end portal stay where they are; items, mobs and other entities still go through (end-portal farms keep working). |
+
 ## Why a launcher instead of a server jar?
 
 A server jar contains Mojang's game code, which we may not hand out. This download contains **no Mojang code**: only

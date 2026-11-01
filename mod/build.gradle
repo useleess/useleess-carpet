@@ -29,6 +29,9 @@ sourceSets {
 }
 
 dependencies {
+    // build-time only (RulesMaker and its tests): never in the shipped jar
+    toolsImplementation 'org.ow2.asm:asm-tree:9.7.1'
+    testImplementation 'org.ow2.asm:asm-tree:9.7.1'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 }
@@ -47,19 +50,36 @@ def masterJar = file(project.findProperty('master') ?: ["../inputs/master-${mine
         .collect { file(it) }.find { it.isFile() } ?: "../inputs/master-${minecraft}.jar")
 def vanillaJar = file(project.findProperty('vanilla') ?: "build/mojang/minecraft_server.${minecraft}.jar")
 def patchDir = layout.buildDirectory.dir('generated/patch')
+def rulesJar = layout.buildDirectory.file("rules/rules-${minecraft}.jar").get().asFile
+
+// master jar + our own Carpet rules (OurRules) = the jar the patch is made for
+def makeRules = tasks.register('makeRules', JavaExec) {
+    description = 'Adds our own Carpet rules and their hooks to the master jar'
+    classpath = sourceSets.tools.runtimeClasspath
+    mainClass = 'com.useleess.carpet.tools.RulesMaker'
+    inputs.file masterJar
+    inputs.files sourceSets.tools.output
+    outputs.file rulesJar
+    args minecraft, masterJar.absolutePath, rulesJar.absolutePath
+}
+tasks.named('test') {
+    dependsOn makeRules
+    systemProperty 'useleess.masterJar', masterJar.absolutePath
+    systemProperty 'useleess.rulesJar', rulesJar.absolutePath
+}
 
 def makePatch = tasks.register('makePatch', JavaExec) {
-    description = 'Makes the patch from Mojang\'s jar and the master jar, proves it rebuilds the master jar exactly and ships no Mojang bytes'
-    dependsOn compileJava, compileToolsJava
+    description = 'Makes the patch from Mojang\'s jar and the rules jar, proves it rebuilds the rules jar exactly and ships no Mojang bytes'
+    dependsOn compileJava, makeRules
     // classes + the source resources only (the built resources hold this task's own output)
     classpath = sourceSets.main.output.classesDirs + sourceSets.tools.output.classesDirs + files('src/main/resources')
     mainClass = 'com.useleess.carpet.tools.PatchMaker'
     maxHeapSize = '2g'
-    inputs.file masterJar
+    inputs.file rulesJar
     inputs.files sourceSets.main.output.classesDirs, sourceSets.tools.output.classesDirs
     def out = patchDir.get().file('useleess-carpet/server.patch').asFile
     outputs.file out
-    args minecraft, vanillaJar.absolutePath, masterJar.absolutePath, out.absolutePath
+    args minecraft, vanillaJar.absolutePath, rulesJar.absolutePath, out.absolutePath
 }
 
 sourceSets.main.resources.srcDir(patchDir)
