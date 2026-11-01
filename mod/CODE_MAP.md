@@ -63,6 +63,33 @@ on this PC. Test-box and release runs get it fresh through `../box-inputs.json` 
 copied to `inputs/master-1.12.2.jar` in the run's copy); a jar older than Redstone Scope's code stops the
 run/release. No hand-made copies (user 2026-10-30). Override with `-Pmaster=`.
 
+## Server code in the jar: `src/server/java/com/useleess/carpet/server` (op-made custom recipes)
+
+The one part of the mod that runs inside the server. Written in Minecraft's **readable (MCP) names**, compiled
+(`compileServerJava`) against ForgeGradle's mapped 1.12.2 jar (its cache, same gradle home as Redstone Scope's build;
+compile-only) + the master jar (libraries, Gson), then by `makeRules` turned into SRG names (`tools/McpNames`, MCP's
+`srg_to_snapshot` table) and into the obfuscated names (Redstone Scope's `Mappings`, **compiled in from
+`../../redstone-scope/.../carpetBuilder/.../Mappings.java`, or `../inputs/rs-remap/Mappings.java` in a box / release copy
+(`box-inputs.json`); never copied, never edited**; `src/tools/java/com/redstonescope/carpetbuild/NameBridge` is the public
+door to it). `tools/ServerLayer` adds the classes (+ the shared `core` package for `Messages` and the lang file), patches
+the six hooks (written in SRG names, `Hooks` is their only target: `CarpetServer.onServerLoaded` (before the worlds load:
+commands + the recipe only) / `tick` (first tick: the world folder; then `Hooks.nextTick` actions - Minecraft's
+`addScheduledTask` runs at once on the server thread) / `playerConnected`, `PlayerList.playerLoggedOut` (before the
+player data is written), `MinecraftServer.stopServer`, `EntityPlayerMP.onDeath` (before the drops)) and `tools/LinkCheck` proves every class / method / field used exists and every abstract method our classes inherit has a
+body (Forge's compile jar gives some `IRecipe` methods default bodies the server does not have), else the build fails.
+- Game-free (unit tests): `Stuff`, `Product`, `RecipeData` (grid trimming, shaped / any-order matching), `RecipeFile` (our
+  JSON format, a bad file = `BadRecipe` with a language key), `RecipeNames`, `ServerText` (English from the lang file).
+- `Hooks` -> `Guard` (every entry runs guarded: a failure logs, ends open editors and switches the feature off; notices go
+  to ops), `Rule` (reads `carpet.CarpetSettings.customRecipes`, a plain rule without hook), `RecipeStore` (files, live list),
+  `CustomRecipes` (the ONE `IRecipe` registered in `CraftingManager.REGISTRY`; asks the store at match time), `ItemCodec`,
+  `Catalogue` + `Category` (picker items), `CustomRecipeCommand` (`/customrecipe`, level 2).
+- The editor: `Editor` (open sessions), `EditorSession` (all state + every click; shows itself through two fake
+  inventories, so the real inventory is never part of the window), `EditorContainer` (chest window, 27 menu + 36 picker
+  slots, own click handling only), `SearchContainer` + `SearchWindow` (the anvil search), `Layout` (slot roles),
+  `Vault` (saves + empties the real inventory first, restores on exit / close / leave / death / stop / off-switch / next join).
+- `SelfTest`: `/uct`, registered only with `-Duseleess.carpet.selftest=1`; the in-game tests drive editors with it by slot role.
+- Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.
+
 ## Per-version layer
 
 Only data: `src/main/resources/useleess-carpet/minecraft/<version>.properties` (Mojang jar SHA-1, Mojang URLs, local
@@ -87,9 +114,10 @@ file names, main class), `src/tools/resources/useleess-carpet/rules/<version>.pr
 
 - Unit (`src/test`, run by `gradlew build`, no game): `PatchTest` (delta, format, leak check), `InstallerTest`
   (download / own copy / cache / mirrors / no internet with a stand-in web), `RulesTest` (every rule a Carpet field
-with its default, the hook at the method's start, a missing target fails the build; reads `build/rules/`), `HygieneTest` (language keys, no
+with its default, the hook at the method's start, a missing target fails the build, exactly which classes the rules jar changes / adds; reads `build/rules/`), `RecipeTest` (recipe grid / file format / names), `tools/LinkCheckTest`, `HygieneTest` (language keys, no
   English in code, version data, no copied code blocks).
 - In-game (`../ingame-test.sh`, test box): the real launcher jar on real servers: download from Mojang, contents,
   own copy, cache reuse, boot, one rule each of VasTech / Kisde / Bullet, Redstone Scope loaded, clean stop.
+  `recipes/`: the custom-recipe editor on its own server with `/uct` (survival op fake players, clicks by slot role).
   `rules/`: our rules on their own server (listed with its default, a Carpet fake player in an end portal stays /
   goes, items still go, `carpet setDefault` kept over a restart). `FILTER=` skips the parts it does not need.

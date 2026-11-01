@@ -44,7 +44,9 @@ import java.util.zip.ZipOutputStream;
  * </pre>
  * Anything missing (data line, class, method, Carpet's annotation or category) fails the build with its name.
  *
- * <pre>RulesMaker &lt;minecraft version&gt; &lt;master jar&gt; &lt;out rules jar&gt;</pre>
+ * Then {@link ServerLayer} adds the server code (recipes editor) and its hooks.
+ *
+ * <pre>RulesMaker &lt;minecraft version&gt; &lt;master jar&gt; &lt;out rules jar&gt; &lt;ServerLayer.Inputs: 6 paths&gt;</pre>
  */
 public final class RulesMaker {
     static final String SETTINGS = "carpet/CarpetSettings";
@@ -55,6 +57,7 @@ public final class RulesMaker {
 
     public static void main(String[] args) throws IOException {
         Map<String, byte[]> jar = make(Patch.readAll(Paths.get(args[1])), hooks(args[0]), OurRules.ALL);
+        ServerLayer.add(jar, new ServerLayer.Inputs(Arrays.copyOfRange(args, 3, args.length)));
         Path out = Paths.get(args[2]);
         Files.createDirectories(out.toAbsolutePath().getParent());
         try (ZipOutputStream o = new ZipOutputStream(Files.newOutputStream(out))) {
@@ -85,6 +88,7 @@ public final class RulesMaker {
         MethodNode clinit = method(settings, "<clinit>", "()V");
         for (OurRules.Rule rule : rules) {
             addField(settings, clinit, rule, categories);
+            if (!rule.hooked) continue;
             String[] at = data(hooks, rule, "method", 3);
             String[] skip = data(hooks, rule, "skipFor", 2);
             if (!jar.containsKey(skip[1] + ".class")) throw new IllegalStateException("class " + skip[1] + " for " + rule.name + " not found in the master jar");

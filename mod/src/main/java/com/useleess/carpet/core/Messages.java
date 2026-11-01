@@ -28,6 +28,12 @@ public final class Messages {
         return new Messages(english, code.equals("en_us") ? english : read(code));
     }
 
+    /** The English text only (the server side: players have no mod, so no language of theirs is known). */
+    public static Messages english() {
+        Map<String, String> english = read("en_us");
+        return new Messages(english, english);
+    }
+
     public String get(String key, Object... args) {
         String text = local.get(key);
         if (text == null) text = english.get(key);

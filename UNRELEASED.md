@@ -7,3 +7,10 @@ Collected here until the next release, then used as the GitHub / Modrinth notes.
   Set it with `/carpet endPortalNoTeleportPlayer true` (`/carpet setDefault ...` keeps it for the world).
 - Fixed: after installing, the launcher told players to start the server with `java -jar start-useleess-carpet.bat`;
   it now says to start `start-useleess-carpet.bat` itself (the jar case keeps `java -jar <jar> nogui`).
+- New rule `customRecipes` (default on) and command `/customrecipe` (ops, permission level 2): make your own crafting
+  recipes inside one chest-style window, no client mod and no creative mode needed (survival works). Your inventory is
+  the item picker (saved to a file first, given back exactly when you leave, also after a crash). Pick an item, click
+  the 3x3 grid and the result slot, Save. Buttons: Clear, Any order, All recipes (load, overwrite, delete), Search (an
+  anvil window), category and page buttons, Exit. Recipes are saved per world in `useleess-carpet/recipes/<name>.json`
+  and work for players with a plain Minecraft client; `carpet customRecipes false` stops them matching without
+  deleting them. A broken recipe file is skipped and named in the log and to ops.

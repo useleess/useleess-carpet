@@ -1,0 +1,78 @@
+waiting for free memory / processor on the test box (5 runs going) ...
+Starting a Gradle Daemon, 8 busy and 1 incompatible and 4 stopped Daemons could not be reused, use --status for details
+Directory 'C:\Users\ndsan\Desktop\AI Agents\minecraft mod maker\toolchain\jdk17\jdk-17.0.20.1+1' (Gradle property 'org.gradle.java.installations.paths') used for java installations does not exist
+Directory 'C:\Users\ndsan\Desktop\AI Agents\minecraft mod maker\toolchain\jdk8\jdk8u504-b01' (Gradle property 'org.gradle.java.installations.paths') used for java installations does not exist
+Directory 'C:\Users\ndsan\Desktop\AI Agents\minecraft mod maker\toolchain\jdk25\jdk-25.0.4.1+1' (Gradle property 'org.gradle.java.installations.paths') used for java installations does not exist
+Directory 'C:\Users\ndsan\Desktop\AI Agents\minecraft mod maker\toolchain\jdk21\jdk-21.0.12.1+1' (Gradle property 'org.gradle.java.installations.paths') used for java installations does not exist
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+3 warnings
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+3 warnings
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+Note: E:\ModTestbox\.judge-runs\20261101-054259-0437-opus-dev-56468-1793535917-56468-f1e0\mod\src\server\java\com\useleess\carpet\server\CustomRecipes.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+3 warnings
+rules jar: E:\ModTestbox\.judge-runs\20261101-054259-0437-opus-dev-56468-1793535917-56468-f1e0\mod\build\rules\rules-1.12.2.jar (2 rules of our own)
+install.downloading [1.12.2, https://piston-data.mojang.com/v1/objects/886945bfb2b978778c3a0288fd7fab09d315b25f/server.jar]
+files: DIR=306 (0 B) SAME=19785 (0 B) DELTA=507 (1554711 B) NEW=967 (2988930 B); shipped 4336422 B, Mojang runs of 64+ B found: 0
+patch OK: E:\ModTestbox\.judge-runs\20261101-054259-0437-opus-dev-56468-1793535917-56468-f1e0\mod\build\generated\patch\useleess-carpet\server.patch (2667304 bytes), rebuilds the rules jar exactly
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+3 warnings
+[Incubating] Problems report is available at: file:///E:/ModTestbox/.judge-runs/20261101-054259-0437-opus-dev-56468-1793535917-56468-f1e0/mod/build/reports/problems/problems-report.html
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+BUILD SUCCESSFUL in 42s
+11 actionable tasks: 11 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
+useleess-carpet-1.12.2-0.1.4.jar
+SCOPE-TEST total 51
+launcher: /e/ModTestbox/.judge-runs/20261101-054259-0437-opus-dev-56468-1793535917-56468-f1e0/mod/build/libs/useleess-carpet-1.12.2-0.1.4.jar
+[Useleess Carpet] Useleess Carpet 0.1.4 for Minecraft 1.12.2
+[Useleess Carpet] Downloading Mojang's official Minecraft 1.12.2 server jar from https://piston-data.mojang.com/v1/objects/886945bfb2b978778c3a0288fd7fab09d315b25f/server.jar
+[Useleess Carpet] Building the server jar on this PC (Mojang's jar + the Carpet patch)...
+[Useleess Carpet] Built useleess-carpet-1.12.2-server.jar in this folder (temporary files removed).
+[Useleess Carpet] Server jar written to E:\ModTestbox\.judge-runs\20261101-054259-0437-opus-dev-56468-1793535917-56468-f1e0\run-ingame\fresh\useleess-carpet-1.12.2-server.jar
+[Useleess Carpet] Made start-useleess-carpet.bat.
+[Useleess Carpet] The installer useleess-carpet-1.12.2-0.1.4.jar is no longer needed: it is deleted as soon as this program closes (when the server stops).
+[Useleess Carpet] From now on start the server with:  start-useleess-carpet.bat
+SCOPE-TEST skip install/download
+SCOPE-TEST skip install/installer-removed
+SCOPE-TEST skip install/clean
+SCOPE-TEST skip install/contents
+SCOPE-TEST skip install/local-copy
+inventory before: [0:minecraft:diamond/0x5, 1:minecraft:stick/0x3, 2:minecraft:golden_apple/0x2] cursor=-
+SCOPE-TEST pass recipes/command-opens
+SCOPE-TEST pass recipes/non-op-refused
+SCOPE-TEST pass recipes/category-cycle
+SCOPE-TEST pass recipes/paging
+SCOPE-TEST pass recipes/search-anvil
+SCOPE-TEST pass recipes/build-save
+SCOPE-TEST pass recipes/craft-works
+SCOPE-TEST pass recipes/shapeless-any-order
+SCOPE-TEST pass recipes/clear
+SCOPE-TEST pass recipes/all-recipes-load-overwrite
+SCOPE-TEST pass recipes/delete-two-clicks
+SCOPE-TEST pass recipes/save-empty-refused
+SCOPE-TEST pass recipes/conflict-refused
+SCOPE-TEST pass recipes/exit-restores
+SCOPE-TEST pass recipes/close-restores
+SCOPE-TEST pass recipes/no-dupes
+SCOPE-TEST pass recipes/disconnect-restores
+./ingame-test.sh: line 349:  1945 Terminated                 tail -f cmds.txt
+      1946 Killed                     | "$JAVA" -Xmx1G $SERVER_OPTS -jar "$SERVER_JAR" nogui > server.log 2>&1
+SCOPE-TEST pass recipes/crash-restores
+SCOPE-TEST pass recipes/rule-off
+SCOPE-TEST pass recipes/rule-on-again
+tail: cmds.txt: file truncated
+SCOPE-TEST pass recipes/survives-restart
+SCOPE-TEST pass recipes/bad-file-skipped
+SCOPE TESTS ALL: 22 passed, 0 failed, 5 skipped

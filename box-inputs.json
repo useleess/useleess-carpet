@@ -4,5 +4,10 @@
   "from": "redstone-scope/mod/versions/1.12.2-carpet/Kisde-Carpet-server-1.12.2-RedstoneScope.jar",
   "to": "inputs/master-1.12.2.jar",
   "fresh": "redstone-scope/mod"
+ },
+ {
+  "_comment": "Redstone Scope's name tables (Mappings.java), compiled into the tools as it is (never copied into this repo); see mod/CODE_MAP.md",
+  "from": "redstone-scope/mod/versions/1.12.2-forge/src/carpetBuilder/java/com/redstonescope/carpetbuild/Mappings.java",
+  "to": "inputs/rs-remap/Mappings.java"
  }
 ]

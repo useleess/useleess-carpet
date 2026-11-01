@@ -11,6 +11,7 @@ import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
@@ -96,14 +97,48 @@ class RulesTest {
         for (int i = 0; i < original.size(); i++) assertEquals(original.get(i).getOpcode(), c.get(i + 6).getOpcode());
     }
 
-    @Test void onlyTheRuleClassesChange() throws IOException {
+    /**
+     * The rules jar is the master jar with exactly these changes: the rule hook (aqh), the rules (CarpetSettings), the
+     * server hooks (CarpetServer, MinecraftServer, PlayerList, EntityPlayerMP), and our own classes and language file added.
+     */
+    @Test void onlyOurChangesAreInTheRulesJar() throws IOException {
         Map<String, byte[]> master = jar("useleess.masterJar");
         Map<String, byte[]> rules = jar("useleess.rulesJar");
-        assertEquals(new ArrayList<>(master.keySet()), new ArrayList<>(rules.keySet()));
+        List<String> masterKeys = new ArrayList<>(master.keySet());
+        assertEquals(masterKeys, new ArrayList<>(rules.keySet()).subList(0, masterKeys.size()), "the master jar's files keep their order");
         List<String> changed = new ArrayList<>();
         for (String name : master.keySet()) if (!Arrays.equals(master.get(name), rules.get(name))) changed.add(name);
         Collections.sort(changed);
-        assertEquals(Arrays.asList("aqh.class", "carpet/CarpetSettings.class"), changed);
+        assertTrue(changed.containsAll(Arrays.asList("aqh.class", "carpet/CarpetSettings.class", "carpet/CarpetServer.class", "net/minecraft/server/MinecraftServer.class")), changed.toString());
+        assertEquals(6, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList and the player class: " + changed);
+        for (String name : rules.keySet()) {
+            if (master.containsKey(name)) continue;
+            assertTrue(name.startsWith("com/useleess/carpet/server/") || name.startsWith("com/useleess/carpet/core/")
+                    || name.equals("assets/useleess_carpet/lang/en_us.json"), "added: " + name);
+        }
+        assertTrue(rules.containsKey("com/useleess/carpet/server/Hooks.class"));
+        assertTrue(rules.containsKey("assets/useleess_carpet/lang/en_us.json"));
+    }
+
+    @Test void theSixServerHooksCallOurHooksClass() throws IOException {
+        Map<String, byte[]> master = jar("useleess.masterJar");
+        Map<String, byte[]> rules = jar("useleess.rulesJar");
+        List<String> called = new ArrayList<>();
+        for (String name : master.keySet()) {
+            if (!name.endsWith(".class") || Arrays.equals(master.get(name), rules.get(name))) continue;
+            for (MethodNode m : node(rules, name.substring(0, name.length() - 6)).methods) {
+                for (AbstractInsnNode i : code(m)) {
+                    if (i instanceof MethodInsnNode && ((MethodInsnNode) i).owner.equals("com/useleess/carpet/server/Hooks")) called.add(((MethodInsnNode) i).name);
+                }
+            }
+        }
+        Collections.sort(called);
+        assertEquals(Arrays.asList("playerDying", "playerJoined", "playerLeft", "serverLoaded", "serverStopping", "tick"), called);
+    }
+
+    @Test void customRecipesIsADefaultOnRuleWithoutAHook() throws IOException {
+        assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals("customRecipes") && r.byDefault && !r.hooked));
+        assertNull(RulesMaker.hooks("1.12.2").getProperty("customRecipes.method"));
     }
 
     /** A missing target never builds a jar without the rule: the build stops and names what is missing. */

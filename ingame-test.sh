@@ -83,7 +83,7 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 29"
+echo "SCOPE-TEST total 51"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -148,6 +148,23 @@ until_ok() {
     return 1
 }
 
+# rules_server: starts the server of the current folder (again; $SERVER_OPTS = extra Java options) and waits for "Done ("
+rules_server() {
+    : > cmds.txt; : > server.log
+    tail -f cmds.txt | "$JAVA" -Xmx1G $SERVER_OPTS -jar "$SERVER_JAR" nogui > server.log 2>&1 &
+    PIDS="$! $PIDS"
+    wait_for server.log "Done (" 300 || { echo "rules server did not start: $(tail -5 server.log | tr '\n' ' ')"; return 1; }
+}
+rules_stop() {
+    say "stop"
+    n=0; while [ $n -lt 60 ] && kill -0 "${PIDS%% *}" 2>/dev/null; do sleep 1; n=$((n + 1)); done
+    kill -9 "${PIDS%% *}" 2>/dev/null
+}
+# the section's server and the "tail -f" feeding its console end with the section, also after a failure
+rules_end() {
+    rules_stop
+    for p in $(ps 2>/dev/null | awk -v me=$$ '$2 == me && /tail/ {print $1}'); do kill "$p" 2>/dev/null; done
+}
 # 4..12. a real server from the launcher, reusing the jar built in step 1; the folder also holds 0.1.0's old cache
 if section install/ server/; then
 C="$BASE/server"; mkdir -p "$C"; cd "$C" || exit 2
@@ -204,23 +221,6 @@ R="$BASE/rules"; mkdir -p "$R"; cd "$R" || exit 2
 cp "$A/$SERVER_JAR" .
 echo "eula=true" > eula.txt
 printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=4\nsnooper-enabled=false\nspawn-monsters=false\n' "$((PORT + 1))" > server.properties
-# rules_server: starts it (again) and waits for "Done ("
-rules_server() {
-    : > cmds.txt; : > server.log
-    tail -f cmds.txt | "$JAVA" -Xmx1G -jar "$SERVER_JAR" nogui > server.log 2>&1 &
-    PIDS="$! $PIDS"
-    wait_for server.log "Done (" 300 || { echo "rules server did not start: $(tail -5 server.log | tr '\n' ' ')"; return 1; }
-}
-rules_stop() {
-    say "stop"
-    n=0; while [ $n -lt 60 ] && kill -0 "${PIDS%% *}" 2>/dev/null; do sleep 1; n=$((n + 1)); done
-    kill -9 "${PIDS%% *}" 2>/dev/null
-}
-# the section's server and the "tail -f" feeding its console end with the section, also after a failure
-rules_end() {
-    rules_stop
-    for p in $(ps 2>/dev/null | awk -v me=$$ '$2 == me && /tail/ {print $1}'); do kill "$p" 2>/dev/null; done
-}
 RULE=endPortalNoTeleportPlayer
 NOTFOUND="found nothing|cannot be found|No entity|not found|did not match"
 # the whole section ends by this clock time; every wait below is also short on its own and says why it gave up
@@ -307,6 +307,209 @@ ask "carpet setDefault $RULE true" "$RULE"
 rules_stop
 ok=1; grep -rq "$RULE true" --include=carpet.conf . && rules_server && ask "carpet $RULE" "$RULE" && sleep 1 && tail -n 8 server.log | grep -q "true" && ok=0
 result rules/saved-in-carpet-conf $ok "$RULE was not true after setDefault + restart ($(cat */carpet.conf 2>/dev/null | tr '\n' ' '))"
+rules_end
+fi
+
+# ---- op-made custom recipes (rule customRecipes, /customrecipe): a server of its own with the self-test command /uct,
+# which drives fake players' editors by slot ROLE through their real open container. Survival ops, no client.
+if section recipes/; then
+Q="$BASE/recipes"; mkdir -p "$Q"; cd "$Q" || exit 2
+cp "$A/$SERVER_JAR" .
+echo "eula=true" > eula.txt
+printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=6\nsnooper-enabled=false\nspawn-monsters=false\n' "$((PORT + 2))" > server.properties
+SERVER_OPTS="-Duseleess.carpet.selftest=1"
+RECIPES="world/useleess-carpet/recipes"
+VAULT="world/useleess-carpet/editor"
+# uct <action> <player> [args]: runs /uct; the answer line is in $ANS (empty = no answer within 20 s)
+uct() {
+    before=$(wc -l < server.log); say "uct $*"; n=0; ANS=""
+    while [ $n -lt 40 ]; do
+        ANS="$(tail -n +"$((before + 1))" server.log | grep -E "UCT $1 |Unknown command|Caught previously unhandled|cannot be found|unknown error|Usage: " | head -n 1)"
+        [ -n "$ANS" ] && return 0
+        sleep 0.5; n=$((n + 1))
+    done
+    return 1
+}
+ans_has() { printf '%s' "$ANS" | grep -qE -e "$1"; }
+click() { uct click UcOp "$@"; }
+# until_state <seconds> <pattern>: asks UcOp's editor state until it matches (the state answers at once; this waits for scheduled window changes)
+until_state() {
+    t=$1; end=$(($(date +%s) + t))
+    while [ "$(date +%s)" -lt "$end" ]; do uct state UcOp && ans_has "$2" && return 0; sleep 0.5; done
+    return 1
+}
+# wait_i <text> <seconds>: like wait_for on server.log, any letter case (Carpet may log a fake player's name in lower case)
+wait_i() { n=0; while [ $n -lt "$2" ]; do grep -qi -e "$1" server.log && return 0; sleep 1; n=$((n + 1)); done; return 1; }
+# spawn_player <name> <x>: a Carpet fake player joins at the console's spot, 0 0 0, inside the bedrock, from where it can
+# fall out of the world within a second. Carpet makes the player inside the spawn command itself, so the tp sent right
+# behind it runs before the player can fall. Waits for the "[local] logged in" line (the "joined" line may carry colour
+# codes); Carpet first asks Mojang for the skin, and with no answer that waits for the web timeout: up to 3 minutes.
+spawn_player() {
+    before=$(grep -ci "$1\[local\] logged in" server.log)
+    say "player $1 spawn"; say "tp $1 $2 4 2.5"
+    n=0; while [ $n -lt 360 ] && [ "$(grep -ci "$1\[local\] logged in" server.log)" -le "$before" ]; do sleep 0.5; n=$((n + 1)); done
+    [ $n -lt 360 ] || return 1
+    say "tp $1 $2 4 2.5"; say "gamemode survival $1"
+}
+# rresult: result for a recipes/ test; a failure also prints the server's errors logged since the last failure (its cause)
+LOGMARK=0
+rresult() {
+    result "$@"
+    [ "$2" = 0 ] && return
+    [ "$LOGMARK" -le "$(wc -l < server.log)" ] || LOGMARK=0
+    tail -n +"$((LOGMARK + 1))" server.log | grep -E -A14 "Exception|Error|Caused by|Couldn't|UseleessCarpet" | head -n 60
+    LOGMARK=$(wc -l < server.log)
+}
+# player_gone <name> <seconds>: waits until the server no longer has that player
+player_gone() {
+    end=$(($(date +%s) + $2))
+    while [ "$(date +%s)" -lt "$end" ]; do uct inv "$1"; ans_has "cannot be found" && return 0; sleep 0.5; done
+    return 1
+}
+craft_sword="- minecraft:stick - - minecraft:diamond - - minecraft:diamond -"
+rules_server && spawn_player UcOp 2.5 && spawn_player UcPlain 6.5 && spawn_player UcCraft 10.5 && ask "op UcOp" "Opped UcOp"
+uct give UcOp minecraft:diamond 5; uct give UcOp minecraft:stick 3; uct give UcOp minecraft:golden_apple 2
+uct inv UcOp; INV_BEFORE="${ANS#*UCT inv }"
+echo "inventory before: $INV_BEFORE"
+
+# the op opens the editor: survival, no items needed; the real inventory is saved and emptied
+uct cmd UcOp customrecipe
+ok=1; until_state 20 "mode=EDITOR ready=true" && uct inv UcOp && ans_has "\[\] cursor=-" && [ -f "$VAULT"/*.dat ] && ok=0
+rresult recipes/command-opens $ok "state: $ANS; vault: $(ls $VAULT 2>/dev/null)"
+[ $ok = 0 ] || { echo "recipes server log, our lines:"; grep -iE -A12 "useleess|customrecipe|exception" server.log | head -80; echo "recipes server log, last lines:"; tail -n 40 server.log; }
+
+# a player who is not an op is refused
+ok=1; uct cmd UcPlain customrecipe && ans_has "result=0" && uct state UcPlain && ans_has "state none" && ok=0
+rresult recipes/non-op-refused $ok "$ANS"
+
+# the category button: click = next, right-click = previous; ten clicks come round
+ok=1
+uct state UcOp; start="$(printf '%s' "$ANS" | sed -n 's/.* category=\([a-z]*\) .*/\1/p')"
+click CATEGORY 0 0 && uct state UcOp && ans_has "category=decoration" && click CATEGORY 0 1 && uct state UcOp && ans_has "category=$start " && ok=0
+if [ $ok = 0 ]; then ok=1; i=0; while [ $i -lt 10 ]; do click CATEGORY 0 0; i=$((i + 1)); done; uct state UcOp && ans_has "category=$start " && ok=0; fi
+rresult recipes/category-cycle $ok "$ANS"
+
+# paging in a long category
+uct state UcOp; first="$(printf '%s' "$ANS" | sed -n 's/.* picker0=\([^ ]*\) .*/\1/p')"
+ok=1
+click NEXT 0 0 && uct state UcOp && ans_has "page=1 " && ! ans_has "picker0=$first " && click PREV 0 0 && uct state UcOp && ans_has "page=0 " && ans_has "picker0=$first " && ok=0
+rresult recipes/paging $ok "first $first, then $ANS"
+
+# search through the anvil window: the grid is kept, the picker is filtered, back in the editor
+click CLEAR; uct pick UcOp minecraft:diamond && click GRID 4 0
+ok=1
+click SEARCH && until_state 20 "searchready=true" && uct typesearch UcOp sword && uct click UcOp ANVIL_OUT && until_state 20 "mode=EDITOR ready=true" \
+    && ans_has "search=\[sword\]" && ans_has "grid=-,-,-,-,minecraft:diamond/0x1" && uct pick UcOp minecraft:diamond_sword && ans_has "picked minecraft:diamond_sword" && ok=0
+rresult recipes/search-anvil $ok "$ANS"
+click SEARCH; until_state 20 "searchready=true"; uct typesearch UcOp "Type to search"; uct click UcOp ANVIL_OUT; until_state 20 "mode=EDITOR ready=true"
+
+# build a recipe and save it: the menu stays open, the file is written
+click CLEAR
+uct pick UcOp minecraft:stick && click GRID 1 0; uct pick UcOp minecraft:diamond && click GRID 4 0 && click GRID 7 0
+uct pick UcOp minecraft:diamond_sword && click OUTPUT 0 0 && click SAVE
+ok=1; uct state UcOp && ans_has "editing=diamond_sword" && ans_has "ready=true" && ans_has "Saved recipe diamond_sword" && [ -f "$RECIPES/diamond_sword.json" ] && ok=0
+rresult recipes/build-save $ok "$ANS; files: $(ls $RECIPES 2>/dev/null)"
+
+# a normal player at a real crafting table gets the result
+ok=1; uct craft UcCraft $craft_sword && ans_has "result=minecraft:diamond_sword/0x1" && ans_has "took=minecraft:diamond_sword/0x1" && ok=0
+rresult recipes/craft-works $ok "$ANS"
+
+# any order: the repeater button, items anywhere in the grid
+click CLEAR; click ORDER 0 0
+uct pick UcOp minecraft:diamond && click GRID 0 0; uct pick UcOp minecraft:stick && click GRID 5 0
+uct pick UcOp minecraft:emerald && click OUTPUT 0 0 && click SAVE
+ok=1; uct state UcOp && ans_has "anyorder=true" && ans_has "editing=emerald" && ok=0
+if [ $ok = 0 ]; then ok=1; uct craft UcCraft - - minecraft:diamond - - - minecraft:stick - - && ans_has "result=minecraft:emerald/0x1" && ok=0; fi
+rresult recipes/shapeless-any-order $ok "$ANS"
+click ORDER 0 0
+
+# clear empties the grid and the result
+click CLEAR
+ok=1; uct state UcOp && ans_has "grid=-,-,-,-,-,-,-,-,- output=-" && ok=0
+rresult recipes/clear $ok "$ANS"
+
+# all recipes: load one (its shape at the top left of the grid), change its result to 2 diamonds (a stackable item:
+# +1 stops at the stack size), save over it, delete one with two clicks
+ok=1; STEP="list"; click ALL && uct state UcOp && ans_has "mode=LIST" && STEP="load" && click LIST 0 0 && uct state UcOp && ans_has "mode=EDITOR" && ans_has "editing=diamond_sword" \
+    && STEP="loaded grid" && ans_has "grid=minecraft:stick/0x1,-,-,minecraft:diamond/0x1,-,-,minecraft:diamond/0x1,-,-" && STEP="pick" && uct pick UcOp minecraft:diamond && ans_has "picked minecraft:diamond/" \
+    && STEP="output, then +1" && click OUTPUT 0 0 && click OUTPUT 0 0 && uct state UcOp && ans_has "output=minecraft:diamond/0x2" && STEP="save" && click SAVE && uct state UcOp && ans_has "Saved recipe diamond_sword" \
+    && STEP="file" && grep -q '"count": 2' "$RECIPES/diamond_sword.json" && STEP="craft" && uct craft UcCraft $craft_sword && ans_has "took=minecraft:diamond/0x2" && ok=0
+rresult recipes/all-recipes-load-overwrite $ok "stopped at: $STEP; last answer: $ANS"
+ok=1
+click ALL && click LIST 1 0 QUICK_MOVE && uct state UcOp && ans_has "recipes=\[diamond_sword, emerald\]" && [ -f "$RECIPES/emerald.json" ] \
+    && click LIST 1 0 QUICK_MOVE && uct state UcOp && ans_has "recipes=\[diamond_sword\]" && [ ! -f "$RECIPES/emerald.json" ] && ok=0
+rresult recipes/delete-two-clicks $ok "$ANS; files: $(ls $RECIPES 2>/dev/null)"
+click BACK 0 0; click CLEAR
+
+# refused saves say why and change nothing
+click SAVE
+ok=1; uct state UcOp && ans_has "title=\[Custom recipe - Put items" && ok=0
+rresult recipes/save-empty-refused $ok "$ANS"
+uct pick UcOp minecraft:planks && click GRID 1 0 && click GRID 4 0; uct pick UcOp minecraft:stick && click OUTPUT 0 0 && click SAVE
+ok=1; uct state UcOp && ans_has "Another recipe already gives a result for this grid" && ans_has "recipes=\[diamond_sword\]" && [ ! -f "$RECIPES/stick.json" ] && ok=0
+rresult recipes/conflict-refused $ok "$ANS"
+click CLEAR
+
+# exit: the inventory is exactly as before, the vault file gone
+click EXIT 0 0
+ok=1; uct state UcOp && ans_has "state none" && uct inv UcOp && [ "${ANS#*UCT inv }" = "$INV_BEFORE" ] && [ -z "$(ls $VAULT 2>/dev/null)" ] && ok=0
+rresult recipes/exit-restores $ok "before: $INV_BEFORE; now: $ANS"
+
+# closing the window (Esc) restores too
+uct cmd UcOp customrecipe; until_state 20 "mode=EDITOR ready=true"
+uct close UcOp
+ok=1; uct state UcOp && ans_has "state none" && uct inv UcOp && [ "${ANS#*UCT inv }" = "$INV_BEFORE" ] && ok=0
+rresult recipes/close-restores $ok "before: $INV_BEFORE; now: $ANS"
+
+# nothing can leave: shift-click, number key, drop (Q and outside), double-click, middle-click, drag, anvil clicks
+uct cmd UcOp customrecipe; until_state 20 "mode=EDITOR ready=true"
+# items the world itself dropped (the flat world's villages) are cleared first: only new ones count
+ask "kill @e[type=item]" "Killed|found nothing"
+click SLOT 27 0 PICKUP; click SLOT 27 0 QUICK_MOVE; click SLOT 28 0 QUICK_MOVE; click SLOT 27 0 SWAP; click SLOT 27 8 SWAP; click SLOT 27 0 THROW; click SLOT 27 1 THROW
+click OUTSIDE 0 0 PICKUP; click OUTSIDE 0 1 PICKUP; click OUTSIDE 0 0 THROW; click SLOT 28 0 PICKUP_ALL; click SLOT 28 2 CLONE; click SLOT 28 0 QUICK_CRAFT; click GRID 0 0 QUICK_MOVE
+click SLOT 6 0 QUICK_MOVE; click SLOT 15 0 THROW; click SLOT 62 0 SWAP
+click SEARCH; until_state 20 "searchready=true"; click SLOT 0 0 QUICK_MOVE; click SLOT 0 0 THROW; click SLOT 1 0 SWAP; click SLOT 30 0 QUICK_MOVE; uct click UcOp ANVIL_OUT; until_state 20 "mode=EDITOR ready=true"
+ok=1; uct inv UcOp; real="$ANS"; ask "testfor @e[type=item,x=0,y=0,z=0,r=100]" "Found " "found nothing|cannot be found|No entity|not found|did not match"; gone=$?
+ans_has "UCT inv \[\] cursor=-" && [ $gone = 1 ] && ok=0
+rresult recipes/no-dupes $ok "inventory while editing: $real; item entities answer $gone (0 = some found): $(tail -n 5 server.log | grep -i found)"
+click EXIT 0 0; uct inv UcOp
+[ "${ANS#*UCT inv }" = "$INV_BEFORE" ] || rresult recipes/no-dupes-exit 1 "after the clicks and Exit: $ANS (before: $INV_BEFORE)"
+
+# the op leaves mid-edit: the items are back before the player data is written, and are there when they come back
+uct cmd UcOp customrecipe; until_state 20 "mode=EDITOR ready=true"
+say "player UcOp kill"
+ok=1; STEP="player gone"; player_gone UcOp 30 && STEP="vault emptied" && [ -z "$(ls $VAULT 2>/dev/null)" ] && STEP="rejoin" && spawn_player UcOp 2.5 \
+    && STEP="inventory back" && uct inv UcOp && [ "${ANS#*UCT inv }" = "$INV_BEFORE" ] && ok=0
+rresult recipes/disconnect-restores $ok "stopped at: $STEP; before: $INV_BEFORE; last answer: $ANS; vault: $(ls $VAULT 2>/dev/null)"
+
+# the server is killed mid-edit: the vault file is still there and the items come back at the next join
+uct cmd UcOp customrecipe; until_state 20 "mode=EDITOR ready=true"
+kill -9 "${PIDS%% *}" 2>/dev/null
+n=0; while [ $n -lt 30 ] && kill -0 "${PIDS%% *}" 2>/dev/null; do sleep 1; n=$((n + 1)); done
+had="$(ls $VAULT 2>/dev/null)"
+for p in $(ps 2>/dev/null | awk -v me=$$ '$2 == me && /tail/ {print $1}'); do kill "$p" 2>/dev/null; done
+ok=1; STEP="vault kept after the kill"; [ -n "$had" ] && STEP="restart" && rules_server && STEP="UcOp rejoins" && spawn_player UcOp 2.5 && STEP="UcCraft rejoins" && spawn_player UcCraft 10.5 \
+    && STEP="inventory back" && uct inv UcOp && [ "${ANS#*UCT inv }" = "$INV_BEFORE" ] && STEP="vault emptied" && [ -z "$(ls $VAULT 2>/dev/null)" ] && ok=0
+rresult recipes/crash-restores $ok "stopped at: $STEP; vault after the kill: [$had]; before: $INV_BEFORE; last answer: $ANS"
+
+# the rule off: saved recipes do not match and the command is refused; files stay
+ask "carpet customRecipes false" "customRecipes"
+ok=1; STEP="no craft result"; uct craft UcCraft $craft_sword && ans_has "result=-" && STEP="command refused" && uct cmd UcOp customrecipe && ans_has "result=1" \
+    && STEP="no editor" && uct state UcOp && ans_has "state none" && STEP="file kept" && [ -f "$RECIPES/diamond_sword.json" ] && ok=0
+rresult recipes/rule-off $ok "stopped at: $STEP; last answer: $ANS"
+ask "carpet customRecipes true" "customRecipes"
+ok=1; uct craft UcCraft $craft_sword && ans_has "took=minecraft:diamond/0x2" && ok=0
+rresult recipes/rule-on-again $ok "last answer: $ANS"
+
+# a restart keeps the recipes; a broken file and a badly named file are skipped, the server and the others go on
+rules_stop
+printf '{ nope' > "$RECIPES/broken.json"
+printf '{}' > "$RECIPES/Bad Name.json"
+ok=1; STEP="restart"; rules_server && STEP="players join" && spawn_player UcCraft 10.5 && spawn_player UcOp 2.5 \
+    && STEP="bad files named in the log" && has server.log "broken.json" && has server.log "Bad Name.json" && STEP="craft" && uct craft UcCraft $craft_sword && ans_has "took=minecraft:diamond/0x2" && ok=0
+rresult recipes/survives-restart $ok "stopped at: $STEP; last answer: $ANS"
+ok=1; has server.log "Recipe file broken.json was skipped" && has server.log "Recipe file Bad Name.json was skipped" && ok=0
+rresult recipes/bad-file-skipped $ok "$(grep -i 'skipped' server.log | head -n 3 | tr '\n' ' ')"
 rules_end
 fi
 

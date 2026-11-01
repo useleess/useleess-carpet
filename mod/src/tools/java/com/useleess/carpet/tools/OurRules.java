@@ -18,8 +18,20 @@ public final class OurRules {
         public final String desc;
         /** {@code CarpetSettings$RuleCategory} constants. */
         public final List<String> categories;
+        /** False = no hook into Minecraft's code: our own server code reads the rule (see {@link #plain}). */
+        public final boolean hooked;
 
         public Rule(String name, boolean byDefault, String desc, String... categories) {
+            this(true, name, byDefault, desc, categories);
+        }
+
+        /** A rule with no hook in the per-version data: only the {@code @Rule} field is added. */
+        public static Rule plain(String name, boolean byDefault, String desc, String... categories) {
+            return new Rule(false, name, byDefault, desc, categories);
+        }
+
+        private Rule(boolean hooked, String name, boolean byDefault, String desc, String... categories) {
+            this.hooked = hooked;
             this.name = name;
             this.byDefault = byDefault;
             this.desc = desc;
@@ -30,5 +42,8 @@ public final class OurRules {
     public static final List<Rule> ALL = Collections.unmodifiableList(Arrays.asList(
             new Rule("endPortalNoTeleportPlayer", false,
                     "Players touching an end portal stay where they are; items, mobs and other entities still go through.",
+                    "CREATIVE"),
+            Rule.plain("customRecipes", true,
+                    "Ops can make their own crafting recipes with /customrecipe (saved per world); off = saved recipes do not match and the command is refused.",
                     "CREATIVE")));
 }

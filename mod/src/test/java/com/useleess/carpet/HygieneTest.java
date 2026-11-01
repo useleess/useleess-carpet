@@ -29,7 +29,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class HygieneTest {
     static final Path MAIN = Paths.get("src/main/java");
     static final Path TOOLS = Paths.get("src/tools/java");
-    static final Pattern KEY = Pattern.compile("\"((?:log|install|error|gui)\\.[a-z0-9_.]+|start|starting)\"");
+    static final Path SERVER = Paths.get("src/server/java");
+    static final Pattern KEY = Pattern.compile("\"((?:log|install|error|gui|editor|list|command|recipes|category|selftest)\\.[a-z0-9_.]+|start|starting)\"");
 
     static List<Path> sources(Path root) throws IOException {
         try (Stream<Path> s = Files.walk(root)) {
@@ -45,9 +46,19 @@ class HygieneTest {
         Map<String, String> english = Messages.read("en_us");
         assertFalse(english.isEmpty());
         TreeSet<String> used = new TreeSet<>();
-        for (Path p : sources(MAIN)) {
-            Matcher m = KEY.matcher(read(p));
+        List<Path> code = new ArrayList<>(sources(MAIN));
+        code.addAll(sources(SERVER));
+        boolean categories = false;
+        for (Path p : code) {
+            String source = read(p);
+            Matcher m = KEY.matcher(source);
             while (m.find()) used.add(m.group(1));
+            categories |= source.contains("\"category.\"");
+        }
+        // keys built from a used one: a button's ".lore", and one name per picker category
+        for (String key : english.keySet()) {
+            if (key.endsWith(".lore") && used.contains(key.substring(0, key.length() - ".lore".length()))) used.add(key);
+            if (categories && key.startsWith("category.")) used.add(key);
         }
         TreeSet<String> missing = new TreeSet<>(used);
         missing.removeAll(english.keySet());
@@ -65,6 +76,11 @@ class HygieneTest {
             assertFalse(printLiteral.matcher(s).find(), p + " prints English text: use Messages");
             assertFalse(problemText.matcher(s).find(), p + " has a Problem without a message key");
         }
+    }
+
+    @Test void noPlayerTextInServerCode() throws IOException {
+        Pattern literalMessage = Pattern.compile("new TextComponentString\\(\\s*\"");
+        for (Path p : sources(SERVER)) assertFalse(literalMessage.matcher(read(p)).find(), p + " sends English text: use ServerText");
     }
 
     @Test void messagesAreFormattedWithTheirValues() {
@@ -92,6 +108,7 @@ class HygieneTest {
         List<String> copies = new ArrayList<>();
         List<Path> all = new ArrayList<>(sources(MAIN));
         all.addAll(sources(TOOLS));
+        all.addAll(sources(SERVER));
         for (Path p : all) {
             List<String> lines = new ArrayList<>();
             for (String l : read(p).split("\n")) {

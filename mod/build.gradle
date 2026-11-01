@@ -15,26 +15,46 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+// Redstone Scope's name tables code (Mappings.java) is compiled in as it is, never copied into this repo: from
+// redstone-scope on this PC, from ../inputs/rs-remap/ in a test-box / release copy (../box-inputs.json).
+def rsMappings = ['../../redstone-scope/mod/versions/1.12.2-forge/src/carpetBuilder/java/com/redstonescope/carpetbuild/Mappings.java',
+        '../inputs/rs-remap/Mappings.java'].collect { file(it) }.find { it.isFile() }
+def rsGenerated = layout.buildDirectory.dir('generated/rs-remap')
+def copyMappings = tasks.register('copyMappings', Copy) {
+    description = 'Puts the Redstone Scope name tables (Mappings.java) where the tools source set compiles it'
+    if (rsMappings == null) throw new GradleException('Mappings.java of Redstone Scope not found (redstone-scope/ or ../inputs/rs-remap/, see ../box-inputs.json)')
+    from rsMappings
+    into rsGenerated.map { it.dir('com/redstonescope/carpetbuild') }
+}
+
 sourceSets {
+    // the server side that goes into the server jar (recipes editor): written in Minecraft's readable (MCP) names
+    server {
+        compileClasspath += main.output.classesDirs
+    }
     // build-time tools (patch maker + leak check): never part of the shipped jar
     tools {
+        java.srcDir rsGenerated
         // main's classes only: main's built resources hold the patch these tools make
         compileClasspath += main.output.classesDirs
         runtimeClasspath += main.output.classesDirs + files('src/main/resources')
     }
     test {
-        compileClasspath += tools.output
-        runtimeClasspath += tools.output
+        compileClasspath += tools.output + server.output
+        runtimeClasspath += tools.output + server.output
     }
 }
 
 dependencies {
     // build-time only (RulesMaker and its tests): never in the shipped jar
-    toolsImplementation 'org.ow2.asm:asm-tree:9.7.1'
+    toolsImplementation 'org.ow2.asm:asm-tree:9.7.1', 'org.ow2.asm:asm-commons:9.7.1'
     testImplementation 'org.ow2.asm:asm-tree:9.7.1'
+    testImplementation 'com.google.code.gson:gson:2.8.9'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 }
+
+tasks.named('compileToolsJava') { dependsOn copyMappings }
 
 test {
     useJUnitPlatform()
@@ -52,15 +72,33 @@ def vanillaJar = file(project.findProperty('vanilla') ?: "build/mojang/minecraft
 def patchDir = layout.buildDirectory.dir('generated/patch')
 def rulesJar = layout.buildDirectory.file("rules/rules-${minecraft}.jar").get().asFile
 
+// Minecraft in readable (MCP) names for compiling src/server, and MCP's name tables: ForgeGradle's cache (made when
+// Redstone Scope builds; the test box shares it through the toolchain's gradle home). Compile only, never shipped.
+def forgeCache = "${gradle.gradleUserHomeDir}/caches/forge_gradle/minecraft_user_repo"
+def mappedJar = file(project.findProperty('mappedJar') ?: "${forgeCache}/net/minecraftforge/forge/1.12.2-14.23.5.2860_mapped_snapshot_20171003-1.12/forge-1.12.2-14.23.5.2860_mapped_snapshot_20171003-1.12.jar")
+def obfToSrg = file("${forgeCache}/de/oceanlabs/mcp/mcp_config/1.12.2-20200226.224830/obf_to_srg.tsrg")
+def srgToMcp = file("${forgeCache}/de/oceanlabs/mcp/mcp_config/1.12.2-20200226.224830/srg_to_snapshot_20171003-1.12.tsrg")
+dependencies { serverCompileOnly files(mappedJar, masterJar) }
+
 // master jar + our own Carpet rules (OurRules) = the jar the patch is made for
 def makeRules = tasks.register('makeRules', JavaExec) {
     description = 'Adds our own Carpet rules and their hooks to the master jar'
     classpath = sourceSets.tools.runtimeClasspath
     mainClass = 'com.useleess.carpet.tools.RulesMaker'
+    dependsOn tasks.named('compileJava'), tasks.named('serverClasses')
     inputs.file masterJar
-    inputs.files sourceSets.tools.output
+    inputs.files sourceSets.tools.output, sourceSets.server.output.classesDirs, sourceSets.main.output.classesDirs
+    inputs.files mappedJar, obfToSrg, srgToMcp
     outputs.file rulesJar
-    args minecraft, masterJar.absolutePath, rulesJar.absolutePath
+    doFirst {
+        [mappedJar, obfToSrg, srgToMcp].each {
+            if (!it.isFile()) throw new GradleException("missing ${it} (ForgeGradle's cache: build Redstone Scope once on this machine, or give -PmappedJar=)")
+        }
+    }
+    args minecraft, masterJar.absolutePath, rulesJar.absolutePath,
+            sourceSets.server.output.classesDirs.singleFile.absolutePath, sourceSets.main.output.classesDirs.singleFile.absolutePath,
+            file('src/main/resources/assets/useleess_carpet/lang/en_us.json').absolutePath,
+            mappedJar.absolutePath, obfToSrg.absolutePath, srgToMcp.absolutePath
 }
 tasks.named('test') {
     dependsOn makeRules

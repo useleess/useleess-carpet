@@ -20,6 +20,11 @@
    "prefix": "rules/",
    "min": 5,
    "what": "our own Carpet rules: listed, saved, endPortalNoTeleportPlayer"
+  },
+  {
+   "prefix": "recipes/",
+   "min": 16,
+   "what": "op-made custom recipes (rule customRecipes, /customrecipe): survival op opens the one-window editor, category / paging / anvil search, build + save, crafting works, any order, clear, all recipes (load, overwrite, delete), refused saves, exit / close / disconnect / killed server restore the inventory exactly, no item can leave, non-op and rule-off refused, restart keeps recipes, bad file skipped"
   }
  ]
 }

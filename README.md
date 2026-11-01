@@ -50,6 +50,27 @@ CarpetSP's rule screen.
 | Rule | Default | What it does |
 |---|---|---|
 | `endPortalNoTeleportPlayer` | false | Players touching an end portal stay where they are; items, mobs and other entities still go through (end-portal farms keep working). |
+| `customRecipes` | true | Ops can make their own crafting recipes with `/customrecipe` (see below). Off = saved recipes do not match and the command is refused; the recipe files stay. |
+
+## Making your own crafting recipe (ops)
+
+Type `/customrecipe` (operators, permission level 2; survival is fine, no creative mode and no mod on your side).
+One chest window opens; your inventory is saved to a file and then used as the item picker, and given back exactly
+when you leave.
+
+1. Click an item in the picker (the bottom part of the window): it is selected. Use the category button (click = next,
+   right-click = previous) and the page arrows to find it, or the sign (Search) to filter by name.
+2. Click a cell of the 3x3 grid to put the selected item there (right-click empties the cell).
+3. Select the result item and click the output slot (click again with the same item = one more, right-click = one less).
+4. The repeater switches "any order" (shapeless) on or off. Click the emerald (Save): the recipe is saved under the
+   result's name (`diamond_sword`, then `diamond_sword_2`). Save is refused with a message when the grid or result
+   is empty or another recipe already gives a result for that grid.
+5. Book (All recipes): load a saved recipe to change it (Save then overwrites it); shift-click one, then shift-click
+   again, to delete it. Bucket (Clear) empties the grid and result. Barrier (Exit) or Esc closes the editor.
+
+Recipes are saved in the world folder: `useleess-carpet/recipes/<name>.json` (shaped or shapeless, items by registry
+name + meta, the result with its NBT). Players craft them in any crafting table with a plain Minecraft client. A broken
+file is skipped with a note in the log and to ops; the others keep working.
 
 ## Why a launcher instead of a server jar?
 
