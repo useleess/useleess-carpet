@@ -85,7 +85,7 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
   `Catalogue` + `Category` (picker items), `CustomRecipeCommand` (`/customrecipe`, level 2).
 - The editor: `Editor` (open sessions), `EditorSession` (all state + every click; shows itself through two fake
   inventories, so the real inventory is never part of the window), `EditorContainer` (chest window, 27 menu + 36 picker
-  slots, own click handling only), `SearchContainer` + `SearchWindow` (the anvil search), `Layout` (slot roles),
+  slots, own click handling only), `SearchContainer` + `SearchWindow` (the anvil search), `TitleText` (short window-title statuses, game-free), `Layout` (slot roles),
   `Vault` (saves + empties the real inventory first, restores on exit / close / leave / death / stop / off-switch / next join).
 - `SelfTest`: `/uct`, registered only with `-Duseleess.carpet.selftest=1`; the in-game tests drive editors with it by slot role.
 - Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.

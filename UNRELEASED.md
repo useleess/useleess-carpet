@@ -14,3 +14,8 @@ Collected here until the next release, then used as the GitHub / Modrinth notes.
   anvil window), category and page buttons, Exit. Recipes are saved per world in `useleess-carpet/recipes/<name>.json`
   and work for players with a plain Minecraft client; `carpet customRecipes false` stops them matching without
   deleting them. A broken recipe file is skipped and named in the log and to ops.
+- Recipe editor: the search box now starts empty (the hint is in the paper's description) instead of "Type to search".
+- Recipe editor: a search looks in every category (the category button says so, and tells you when nothing matches).
+- Recipe editor: the search anvil no longer shows an "Enchantment Cost" line.
+- Recipe editor: the window title after Save / Load / Delete is short ("Saved: golden_apple", at most 30 characters);
+  the full message still goes to chat.

@@ -6,6 +6,7 @@ import com.useleess.carpet.server.RecipeData;
 import com.useleess.carpet.server.RecipeFile;
 import com.useleess.carpet.server.RecipeNames;
 import com.useleess.carpet.server.Stuff;
+import com.useleess.carpet.server.TitleText;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -137,5 +138,13 @@ class RecipeTest {
         assertEquals("diamond_sword", RecipeNames.unique("diamond_sword", new HashSet<String>()));
         assertEquals("diamond_sword_2", RecipeNames.unique("diamond_sword", new HashSet<>(Arrays.asList("diamond_sword"))));
         assertEquals("diamond_sword_3", RecipeNames.unique("diamond_sword", new HashSet<>(Arrays.asList("diamond_sword", "diamond_sword_2"))));
+    }
+
+    @Test void titleStatusFitsTheWindow() {
+        assertEquals("Saved: golden_apple", TitleText.fit("Saved: golden_apple"));
+        String cut = TitleText.fit("Saved: light_weighted_pressure_plate");
+        assertEquals(TitleText.MAX, cut.length());
+        assertEquals("Saved: light_weighted_press...", cut);
+        assertEquals(TitleText.MAX, TitleText.fit(String.join("", Collections.nCopies(TitleText.MAX, "x"))).length());
     }
 }

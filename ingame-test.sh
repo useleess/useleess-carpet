@@ -401,13 +401,25 @@ ok=1
 click SEARCH && until_state 20 "searchready=true" && uct typesearch UcOp sword && uct click UcOp ANVIL_OUT && until_state 20 "mode=EDITOR ready=true" \
     && ans_has "search=\[sword\]" && ans_has "grid=-,-,-,-,minecraft:diamond/0x1" && uct pick UcOp minecraft:diamond_sword && ans_has "picked minecraft:diamond_sword" && ok=0
 rresult recipes/search-anvil $ok "$ANS"
-click SEARCH; until_state 20 "searchready=true"; uct typesearch UcOp "Type to search"; uct click UcOp ANVIL_OUT; until_state 20 "mode=EDITOR ready=true"
+click SEARCH; until_state 20 "searchready=true"; uct typesearch UcOp ""; uct click UcOp ANVIL_OUT; until_state 20 "mode=EDITOR ready=true"
+# the search box starts empty (the hint is the paper's lore) and the anvil shows no level cost
+click SEARCH; ok=1
+until_state 20 "searchready=true" && ans_has "anvil=\[\] cost=0 " && ok=0
+rresult recipes/search-anvil-empty $ok "$ANS"
+uct typesearch UcOp ""; uct click UcOp ANVIL_OUT; until_state 20 "mode=EDITOR ready=true"
+
+# a search looks in every category: with the category on Building, "apple" is still found
+ok=1; i=0; while [ $i -lt 12 ] && { uct state UcOp; ! ans_has "category=building "; }; do click CATEGORY 0 0; i=$((i + 1)); done
+click SEARCH && until_state 20 "searchready=true" && uct typesearch UcOp apple && uct click UcOp ANVIL_OUT && until_state 20 "mode=EDITOR ready=true" \
+    && ans_has "search=\[apple\]" && ans_has "category=building " && uct pick UcOp minecraft:apple && ans_has "picked minecraft:apple" && ok=0
+rresult recipes/search-all-categories $ok "$ANS"
+click SEARCH; until_state 20 "searchready=true"; uct typesearch UcOp ""; uct click UcOp ANVIL_OUT; until_state 20 "mode=EDITOR ready=true"
 
 # build a recipe and save it: the menu stays open, the file is written
 click CLEAR
 uct pick UcOp minecraft:stick && click GRID 1 0; uct pick UcOp minecraft:diamond && click GRID 4 0 && click GRID 7 0
 uct pick UcOp minecraft:diamond_sword && click OUTPUT 0 0 && click SAVE
-ok=1; uct state UcOp && ans_has "editing=diamond_sword" && ans_has "ready=true" && ans_has "Saved recipe diamond_sword" && [ -f "$RECIPES/diamond_sword.json" ] && ok=0
+ok=1; uct state UcOp && ans_has "editing=diamond_sword" && ans_has "ready=true" && ans_has "title=\[Saved: diamond_sword\]" && [ -f "$RECIPES/diamond_sword.json" ] && ok=0
 rresult recipes/build-save $ok "$ANS; files: $(ls $RECIPES 2>/dev/null)"
 
 # a normal player at a real crafting table gets the result
@@ -432,7 +444,7 @@ rresult recipes/clear $ok "$ANS"
 # +1 stops at the stack size), save over it, delete one with two clicks
 ok=1; STEP="list"; click ALL && uct state UcOp && ans_has "mode=LIST" && STEP="load" && click LIST 0 0 && uct state UcOp && ans_has "mode=EDITOR" && ans_has "editing=diamond_sword" \
     && STEP="loaded grid" && ans_has "grid=minecraft:stick/0x1,-,-,minecraft:diamond/0x1,-,-,minecraft:diamond/0x1,-,-" && STEP="pick" && uct pick UcOp minecraft:diamond && ans_has "picked minecraft:diamond/" \
-    && STEP="output, then +1" && click OUTPUT 0 0 && click OUTPUT 0 0 && uct state UcOp && ans_has "output=minecraft:diamond/0x2" && STEP="save" && click SAVE && uct state UcOp && ans_has "Saved recipe diamond_sword" \
+    && STEP="output, then +1" && click OUTPUT 0 0 && click OUTPUT 0 0 && uct state UcOp && ans_has "output=minecraft:diamond/0x2" && STEP="save" && click SAVE && uct state UcOp && ans_has "title=\[Saved: diamond_sword\]" \
     && STEP="file" && grep -q '"count": 2' "$RECIPES/diamond_sword.json" && STEP="craft" && uct craft UcCraft $craft_sword && ans_has "took=minecraft:diamond/0x2" && ok=0
 rresult recipes/all-recipes-load-overwrite $ok "stopped at: $STEP; last answer: $ANS"
 ok=1
@@ -443,12 +455,19 @@ click BACK 0 0; click CLEAR
 
 # refused saves say why and change nothing
 click SAVE
-ok=1; uct state UcOp && ans_has "title=\[Custom recipe - Put items" && ok=0
+ok=1; uct state UcOp && ans_has "title=\[Grid or result is empty\]" && ok=0
 rresult recipes/save-empty-refused $ok "$ANS"
 uct pick UcOp minecraft:planks && click GRID 1 0 && click GRID 4 0; uct pick UcOp minecraft:stick && click OUTPUT 0 0 && click SAVE
-ok=1; uct state UcOp && ans_has "Another recipe already gives a result for this grid" && ans_has "recipes=\[diamond_sword\]" && [ ! -f "$RECIPES/stick.json" ] && ok=0
+ok=1; uct state UcOp && ans_has "title=\[Recipe already exists\]" && ans_has "recipes=\[diamond_sword\]" && [ ! -f "$RECIPES/stick.json" ] && ok=0
 rresult recipes/conflict-refused $ok "$ANS"
 click CLEAR
+
+# a status in the title fits the window: at most 30 characters, even for a long result name
+uct pick UcOp minecraft:diamond && click GRID 0 0 && click GRID 1 0; uct pick UcOp minecraft:light_weighted_pressure_plate && click OUTPUT 0 0 && click SAVE
+ok=1; uct state UcOp && ans_has "editing=light_weighted_pressure_plate" && ans_has "title=\[Saved: light_weighted_press\.\.\.\]" \
+    && [ "$(printf '%s' "$ANS" | sed -n 's/.* title=\[\(.*\)\] grid=.*/\1/p' | tr -d '\n' | wc -c)" -le 30 ] && ok=0
+rresult recipes/title-short $ok "$ANS"
+click ALL && click LIST 1 0 QUICK_MOVE && click LIST 1 0 QUICK_MOVE; click BACK 0 0; click CLEAR
 
 # exit: the inventory is exactly as before, the vault file gone
 click EXIT 0 0

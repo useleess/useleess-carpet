@@ -71,7 +71,7 @@ final class SelfTest extends CommandBase {
         for (int i = 0; i < 9; i++) grid.append(show(s.grid(i))).append(i < 8 ? "," : "");
         return "mode=" + s.mode() + " ready=" + s.ready() + " searchready=" + s.searchReady() + " closed=" + s.closed()
                 + " category=" + s.category().key + " page=" + s.pickerPage() + " search=[" + s.searchText() + "] editing=" + s.editing()
-                + " anyorder=" + s.anyOrder() + " title=[" + s.title() + "] grid=" + grid + " output=" + show(s.output())
+                + " anvil=[" + s.anvilName() + "] cost=" + s.anvilCost() + " anyorder=" + s.anyOrder() + " title=[" + s.title() + "] grid=" + grid + " output=" + show(s.output())
                 + " selected=" + show(s.selected()) + " picker0=" + show(s.pickerStack(0)) + " list0=" + show(s.menuStack(0))
                 + " recipes=" + RecipeStore.current.names();
     }
@@ -96,7 +96,7 @@ final class SelfTest extends CommandBase {
         EditorSession s = Editor.get(player);
         ItemStack want = new ItemStack(Item.REGISTRY.getObject(new ResourceLocation(item)));
         Category target = Catalogue.categoryOf(want);
-        while (s.category() != target) player.openContainer.slotClick(Layout.slot(Layout.Role.CATEGORY, 0), 0, ClickType.PICKUP, player);
+        while (s.searchText().isEmpty() && s.category() != target) player.openContainer.slotClick(Layout.slot(Layout.Role.CATEGORY, 0), 0, ClickType.PICKUP, player);
         List<Catalogue.Entry> list = Catalogue.filter(target, s.searchText());
         for (int i = 0; i < list.size(); i++) {
             if (!ItemCodec.stuff(list.get(i).stack).equals(ItemCodec.stuff(want))) continue;

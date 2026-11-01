@@ -57,12 +57,13 @@ final class Catalogue {
         return all;
     }
 
-    /** The items of a category whose registry name holds every word of the search text (blank = all). */
+    /** The items whose registry name holds every word of the search text, from every category; a blank search lists the category. */
     static List<Entry> filter(Category category, String search) {
         String[] words = search.toLowerCase(Locale.ROOT).trim().split("[ _]+");
+        boolean searching = !search.trim().isEmpty();
         List<Entry> out = new ArrayList<>();
         for (Entry e : all()) {
-            if (e.category != category) continue;
+            if (!searching && e.category != category) continue;
             boolean ok = true;
             for (String w : words) ok &= w.isEmpty() || e.searchName.contains(w);
             if (ok) out.add(e);

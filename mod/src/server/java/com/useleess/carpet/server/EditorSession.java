@@ -18,6 +18,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
 import net.minecraft.network.play.server.SPacketOpenWindow;
 import net.minecraft.network.play.server.SPacketSetSlot;
+import net.minecraft.network.play.server.SPacketWindowProperty;
 import net.minecraft.util.text.TextComponentString;
 
 import java.io.IOException;
@@ -75,6 +76,18 @@ final class EditorSession {
     /** Sets the search text as typing it into the anvil's rename field does. */
     void searchTyped(String name) {
         searchDraft = name;
+        noRepairCost();
+    }
+
+    /** What the search anvil's left item is called (the rename field shows it), "-" outside the search. */
+    String anvilName() {
+        if (mode != Mode.SEARCH || search == null) return "-";
+        ItemStack left = search.getSlot(0).getStack();
+        return left.isEmpty() ? "-" : left.getDisplayName();
+    }
+
+    int anvilCost() {
+        return search == null ? -1 : search.maximumCost;
     }
 
     // ------------------------------------------------------------------ windows
@@ -108,8 +121,7 @@ final class EditorSession {
         } finally {
             switching = false;
         }
-        String shown = searchText.isEmpty() ? ServerText.get("editor.search_placeholder") : searchText;
-        search.getSlot(0).putStack(named(new ItemStack(Items.PAPER), shown));
+        search.getSlot(0).putStack(named(new ItemStack(Items.PAPER), searchText, ServerText.get("editor.search_placeholder")));
         search.getSlot(2).putStack(named(new ItemStack(Items.PAPER), ServerText.get("editor.search_apply")));
         resync();
     }
@@ -132,7 +144,7 @@ final class EditorSession {
     }
 
     private void applySearchAndReturn() {
-        searchText = searchDraft.equals(ServerText.get("editor.search_placeholder")) ? "" : searchDraft.trim();
+        searchText = searchDraft.trim();
         pickerPage = 0;
         mode = Mode.EDITOR;
         Hooks.nextTick(() -> {
@@ -289,9 +301,9 @@ final class EditorSession {
             anyOrder = !recipe.shaped;
             editing = recipe.name;
             mode = Mode.EDITOR;
-            say(ServerText.get("editor.loaded", recipe.name));
+            say(ServerText.get("editor.loaded", recipe.name), "editor.title.loaded", recipe.name);
         } catch (BadRecipe e) {
-            say(ServerText.get("editor.load_failed", recipe.name, ServerText.get(e.key, e.args)));
+            say(ServerText.get("editor.load_failed", recipe.name, ServerText.get(e.key, e.args)), "editor.title.load_failed", recipe.name);
         }
     }
 
@@ -299,10 +311,10 @@ final class EditorSession {
         try {
             store.delete(name);
             if (name.equals(editing)) editing = null;
-            say(ServerText.get("editor.deleted", name));
+            say(ServerText.get("editor.deleted", name), "editor.title.deleted", name);
         } catch (IOException e) {
             Guard.LOG.error(ServerText.get("log.recipe_file_failed", name), e);
-            say(ServerText.get("editor.delete_failed", name, String.valueOf(e.getMessage())));
+            say(ServerText.get("editor.delete_failed", name, String.valueOf(e.getMessage())), "editor.title.delete_failed", name);
         }
     }
 
@@ -311,22 +323,22 @@ final class EditorSession {
         Stuff[] stuff = new Stuff[9];
         for (int i = 0; i < 9; i++) stuff[i] = ItemCodec.stuff(grid[i]);
         if (output.isEmpty() || Arrays.stream(stuff).allMatch(s -> s == null)) {
-            say(ServerText.get("editor.save_empty"));
+            say(ServerText.get("editor.save_empty"), "editor.title.save_empty");
             return;
         }
         String clash = clashWith(store, stuff);
         if (clash != null) {
-            say(ServerText.get("editor.save_conflict", clash));
+            say(ServerText.get("editor.save_conflict", clash), "editor.title.save_conflict");
             return;
         }
         String name = editing != null ? editing : RecipeNames.unique(RecipeNames.of(ItemCodec.stuff(output).item), store.names());
         try {
             store.save(RecipeData.fromGrid(name, stuff, 3, anyOrder, ItemCodec.product(output)));
             editing = name;
-            say(ServerText.get("editor.saved", name));
+            say(ServerText.get("editor.saved", name), "editor.title.saved", name);
         } catch (IOException e) {
             Guard.LOG.error(ServerText.get("log.recipe_file_failed", name), e);
-            say(ServerText.get("editor.save_failed", name, String.valueOf(e.getMessage())));
+            say(ServerText.get("editor.save_failed", name, String.valueOf(e.getMessage())), "editor.title.save_failed", name);
         }
     }
 
@@ -348,9 +360,10 @@ final class EditorSession {
 
     // ------------------------------------------------------------------ what the window shows
 
-    private void say(String text) {
+    /** The full text goes to the chat, a short one (lang key {@code titleKey}, at most {@link TitleText#MAX} characters) to the window title. */
+    private void say(String text, String titleKey, Object... titleArgs) {
         player.sendMessage(new TextComponentString(text));
-        setTitleText(ServerText.get("editor.title") + " - " + text);
+        setTitleText(TitleText.fit(ServerText.get(titleKey, titleArgs)));
         titleIsMessage = true;
     }
 
@@ -384,7 +397,10 @@ final class EditorSession {
         pickerPage = Math.max(0, Math.min(pickerPage, pages - 1));
         ItemStack cat = named(category.icon(), ServerText.get("editor.button.category", ServerText.get("category." + category.key)),
                 ServerText.get("editor.button.category.page", pickerPage + 1, pages),
-                searchText.isEmpty() ? "" : ServerText.get("editor.button.category.search", searchText), ServerText.get("editor.button.category.hint"));
+                searchText.isEmpty() ? "" : ServerText.get("editor.button.category.search", searchText),
+                searchText.isEmpty() ? "" : ServerText.get("editor.button.category.search_all"),
+                searchText.isEmpty() || !list.isEmpty() ? "" : ServerText.get("editor.button.category.search_none"),
+                ServerText.get("editor.button.category.hint"));
         menu.setInventorySlotContents(Layout.slot(Layout.Role.CATEGORY, 0), cat);
         button(Layout.Role.PREV, Items.PAPER, "editor.button.prev");
         button(Layout.Role.NEXT, Items.PAPER, "editor.button.next");
@@ -445,5 +461,11 @@ final class EditorSession {
         container.detectAndSendChanges();
         player.sendAllContents(container, container.getInventory());
         player.connection.sendPacket(new SPacketSetSlot(-1, -1, container == search ? ItemStack.EMPTY : selected.copy()));
+        if (container == search) noRepairCost();
+    }
+
+    /** The client works out an anvil's level cost itself; property 0 of the window overrides it, so no cost line shows. */
+    private void noRepairCost() {
+        if (search != null && !closed) player.connection.sendPacket(new SPacketWindowProperty(search.windowId, 0, 0));
     }
 }
