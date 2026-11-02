@@ -37,6 +37,7 @@ public final class Hooks {
         File root = new File(server.getWorld(0).getSaveHandler().getWorldDirectory(), "useleess-carpet");
         Vault.dir = new File(root, "editor");
         RecipeStore.current = RecipeStore.open(new File(root, "recipes"));
+        CarefulBreak.open(new File(root, "careful-break.json"));
     }
 
     /**
@@ -50,6 +51,7 @@ public final class Hooks {
     public static void tick(MinecraftServer server) {
         Guard.run("start", () -> worldsLoaded(server));
         ScopeSwitch.sync();
+        CarefulBreak.tick(server);
         for (int n = NEXT_TICK.size(); n > 0; n--) Guard.run("tick", NEXT_TICK.poll());
     }
 
@@ -66,10 +68,12 @@ public final class Hooks {
             }
             Guard.tellIfOp(player);
         });
+        CarefulBreak.joined(player);
     }
 
     public static void playerLeft(EntityPlayerMP player) {
         Guard.run("leave", () -> Editor.end(player, false));
+        CarefulBreak.left(player);
     }
 
     /** Before the death drops: the real items are back, so the game rules decide what is dropped. */

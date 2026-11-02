@@ -117,5 +117,10 @@
   "category.combat": "Combat",
   "category.brewing": "Brewing",
   "category.materials": "Materials",
-  "selftest.line": "UCT %s %s"
+  "selftest.line": "UCT %s %s",
+  "log.careful_load_failed": "The careful-break choices in %s could not be read; they are not restored.",
+  "log.careful_save_failed": "The careful-break choices could not be saved or restored; they are not remembered until the server restarts.",
+  "log.careful_failed": "Careful break could not look up a player's choice; it needs the Sneak key for now.",
+  "careful.load_failed": "Careful break: the saved choices of the players could not be read, so they were not restored. See the server log.",
+  "careful.failed": "Careful break had a problem and works only while you sneak for now (your choice may not be remembered). See the server log."
 }

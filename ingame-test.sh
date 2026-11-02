@@ -83,7 +83,7 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 51"
+echo "SCOPE-TEST total 56"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -336,6 +336,97 @@ if grep -rq "$SCOPE_RULE false" --include=carpet.conf . && rules_server && ask "
     n=0; while [ $n -lt 3 ] && ! rules_late; do [ "$(scope_answer)" = off ] && { ok=0; break; }; n=$((n + 1)); done
 fi
 result rules/rs-logger-saved $ok "$SCOPE_RULE was not false and Redstone Scope still recording after setDefault + restart ($(cat */carpet.conf 2>/dev/null | tr '\n' ' '))"
+rules_end
+fi
+
+# ---- careful break per player (logger carefulBreak with the options sneak / always): a server of its own, a Carpet
+# fake player (survival) mining a dirt block in front of it; the drop is in its inventory or on the ground.
+if section carefulbreak/; then
+K="$BASE/carefulbreak"; mkdir -p "$K"; cd "$K" || exit 2
+cp "$A/$SERVER_JAR" .
+echo "eula=true" > eula.txt
+printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=4\nsnooper-enabled=false\nspawn-monsters=false\n' "$((PORT + 2))" > server.properties
+CB_NOTFOUND="found nothing|cannot be found|No entity|not found|did not match|rror"
+CB_END=$(($(date +%s) + 420))
+cb_late() { [ "$(date +%s)" -ge "$CB_END" ]; }
+ASK_TRIES=12
+
+# cb_join: the fake player UcBreak joins, stands at 2.5 4 2.5 looking south (level) in survival; prints why not (empty = ok)
+cb_join() {
+    say "player UcBreak spawn"
+    wait_for server.log "UcBreak joined" 60 || { echo "UcBreak did not join within 60 s: $(tail -n 4 server.log | tr '\n' ' ')"; return; }
+    say "gamemode creative UcBreak"; say "tp UcBreak 2.5 4 2.5 0 0"
+    until_ok 15 "testfor @a[name=UcBreak,x=2,y=4,z=2,dx=0,dy=0,dz=0]" "Found UcBreak" "$CB_NOTFOUND" || { echo "UcBreak was never seen at the mining spot"; return; }
+    say "gamemode survival UcBreak"
+}
+# cb_mine: UcBreak mines the dirt block at 2 5 5 and prints where the drop went: inventory, ground or nowhere
+# (or "failed: why" when the block was never broken)
+cb_mine() {
+    say "clear UcBreak"; say "kill @e[type=item]"; sleep 1
+    until_ok 10 "setblock 2 5 5 minecraft:dirt" "Block placed" "Cannot place|$CB_NOTFOUND" || { echo "failed: the dirt block could not be placed"; return; }
+    say "player UcBreak attack continuous"
+    if ! until_ok 30 "testforblock 2 5 5 minecraft:air" "Successfully found" "is not|$CB_NOTFOUND"; then
+        say "player UcBreak stop"; echo "failed: UcBreak did not break the block within 30 s"; return
+    fi
+    say "player UcBreak stop"
+    sleep 2
+    if ask "testfor @e[type=item,x=0,y=0,z=0,r=100]" "Found " "$CB_NOTFOUND"; then echo ground
+    elif ask "clear UcBreak minecraft:dirt 0 0" "has [1-9][0-9]* items" "no items|Could not"; then echo inventory
+    else echo nowhere; fi
+}
+# cb_expect <test id> <inventory|ground> <what was set up>: the result line of one mining run
+cb_expect() {
+    got="$(cb_mine)"
+    ok=1; [ "$got" = "$2" ] && ok=0
+    result "$1" $ok "$3: the drop went to '$got', expected '$2' ($(tail -n 3 server.log | tr '\n' ' '))"
+}
+
+rules_server
+say "carpet setDefault carefulBreak true"
+why="$(cb_join)"
+if [ -n "$why" ]; then
+    for t in sneak-default always off rule-off remembered; do result carefulbreak/$t 1 "$why"; done
+else
+    # 1. option sneak (the console form: a fake player cannot run /log itself)
+    say "log carefulBreak sneak UcBreak"; sleep 1
+    gA="$(cb_mine)"
+    say "player UcBreak sneak"; sleep 1
+    gB="$(cb_mine)"
+    say "player UcBreak stop"
+    ok=1; [ "$gA" = ground ] && [ "$gB" = inventory ] && ok=0
+    result carefulbreak/sneak-default $ok "subscribed with no option: not sneaking the drop went to '$gA' (expected ground), sneaking to '$gB' (expected inventory) ($(tail -n 3 server.log | tr '
+' ' '))"
+    # 2. always: no Sneak key needed
+    say "log carefulBreak clear UcBreak"; sleep 1
+    say "log carefulBreak always UcBreak"; sleep 1
+    cb_expect carefulbreak/always inventory "option always, not sneaking"
+    # 3. not subscribed: ground even while sneaking
+    say "log carefulBreak clear UcBreak"; sleep 1
+    say "player UcBreak sneak"; sleep 1
+    got="$(cb_mine)"
+    say "player UcBreak stop"
+    ok=1; [ "$got" = ground ] && ok=0
+    result carefulbreak/off $ok "not subscribed, sneaking: the drop went to '$got', expected 'ground'"
+    # 4. rule carefulBreak off: ground even with always
+    say "log carefulBreak always UcBreak"; sleep 1
+    ask "carpet carefulBreak false" "carefulBreak" >/dev/null
+    cb_expect carefulbreak/rule-off ground "rule carefulBreak false, option always"
+    ask "carpet carefulBreak true" "carefulBreak" >/dev/null
+    # 5. remembered over a restart: our own file by UUID; Carpet's own copy of the subscription is removed first so
+    # that only ours can put it back
+    n=0; while [ $n -lt 20 ] && ! grep -q always world/useleess-carpet/careful-break.json 2>/dev/null; do sleep 1; n=$((n + 1)); done
+    saved="$(cat world/useleess-carpet/careful-break.json 2>/dev/null)"
+    rules_stop
+    for f in $(grep -rl carefulBreak --include='*.json' --include='*.conf' . 2>/dev/null | grep -v 'useleess-carpet/careful-break.json'); do
+        case "$f" in *carpet.conf) ;; *) rm -f "$f" ;; esac
+    done
+    ok=1
+    if rules_server; then
+        why="$(cb_join)"
+        [ -z "$why" ] && { got="$(cb_mine)"; [ "$got" = inventory ] && ok=0; why="after the restart the drop went to '$got', expected 'inventory'"; }
+    else why="the server did not start again"; fi
+    result carefulbreak/remembered $ok "$why (saved file: $saved)"
+fi
 rules_end
 fi
 

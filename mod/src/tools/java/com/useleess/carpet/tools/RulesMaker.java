@@ -44,7 +44,7 @@ import java.util.zip.ZipOutputStream;
  * </pre>
  * Anything missing (data line, class, method, Carpet's annotation or category) fails the build with its name.
  *
- * Then {@link ServerLayer} adds the server code (recipes editor) and its hooks.
+ * {@link CarefulBreakPatch} adds the per-player options of careful break; then {@link ServerLayer} adds the server code (recipes editor) and its hooks.
  *
  * <pre>RulesMaker &lt;minecraft version&gt; &lt;master jar&gt; &lt;out rules jar&gt; &lt;ServerLayer.Inputs: 6 paths&gt;</pre>
  */
@@ -97,6 +97,7 @@ public final class RulesMaker {
             jar.put(at[0] + ".class", write(target));
         }
         jar.put(SETTINGS + ".class", write(settings));
+        CarefulBreakPatch.apply(jar, hooks);
         return jar;
     }
 
@@ -151,9 +152,13 @@ public final class RulesMaker {
     }
 
     private static String[] data(Properties hooks, OurRules.Rule rule, String key, int parts) {
-        String v = hooks.getProperty(rule.name + "." + key);
+        return data(hooks, rule.name, key, parts);
+    }
+
+    static String[] data(Properties hooks, String name, String key, int parts) {
+        String v = hooks.getProperty(name + "." + key);
         String[] s = v == null ? new String[0] : v.trim().split(" +");
-        if (s.length != parts) throw new IllegalStateException("rule hook data " + rule.name + "." + key + " missing or not " + parts + " words: " + v);
+        if (s.length != parts) throw new IllegalStateException("rule hook data " + name + "." + key + " missing or not " + parts + " words: " + v);
         return s;
     }
 
@@ -162,7 +167,7 @@ public final class RulesMaker {
         throw new IllegalStateException("method " + c.name + "." + name + desc + " not found in the master jar");
     }
 
-    private static ClassNode read(Map<String, byte[]> jar, String name) {
+    static ClassNode read(Map<String, byte[]> jar, String name) {
         byte[] b = jar.get(name + ".class");
         if (b == null) throw new IllegalStateException("class " + name + " not found in the master jar");
         ClassNode c = new ClassNode();
@@ -170,7 +175,7 @@ public final class RulesMaker {
         return c;
     }
 
-    private static byte[] write(ClassNode c) {
+    static byte[] write(ClassNode c) {
         ClassWriter w = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         c.accept(w);
         return w.toByteArray();

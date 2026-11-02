@@ -55,6 +55,10 @@ Flow: master jar -> `makeRules` -> rules jar (`build/rules/rules-<mc>.jar`) -> `
   fails the build with its name.
 - `PatchMaker`: Gradle task `makePatch`: Mojang jar (downloaded into `build/mojang/`) + rules jar -> patch, then
   **LeakCheck** + a full rebuild compared file for file with the rules jar. Any failure fails the build.
+- `CarefulBreakPatch` (called by `RulesMaker.make`, data lines `carefulBreak.class` / `carefulBreak.sneakCall` in the
+  per-version rules data): gives Carpet's `carefulBreak` logger the options `sneak` (default) / `always` (the two nulls
+  of its registration in `LoggerRegistry`) and replaces the one `isSneaking()` call of the miner in the drop code (`aow`)
+  by `CarefulBreak.wants(player)`. A missing or repeated site fails the build.
 - `LeakCheck`: no inserted run of 64+ bytes may appear anywhere in Mojang's jar.
 
 The master jar is Redstone Scope's `buildCarpetJar` output
@@ -87,6 +91,9 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
   inventories, so the real inventory is never part of the window), `EditorContainer` (chest window, 27 menu + 36 picker
   slots, own click handling only), `SearchContainer` + `SearchWindow` (the anvil search), `TitleText` (short window-title statuses, game-free), `Layout` (slot roles),
   `Vault` (saves + empties the real inventory first, restores on exit / close / leave / death / stop / off-switch / next join).
+- Careful break: `CarefulBreak` (`wants`; reads `LoggerRegistry.getPlayerSubscriptions`, the player's option; saves a
+  changed choice from `Hooks.tick` / join / leave, puts a saved one back on join; every failure = Sneak needed, logged +
+  told once) and `CarefulStore` (game-free: `<world>/useleess-carpet/careful-break.json`, UUID to option).
 - `SelfTest`: `/uct`, registered only with `-Duseleess.carpet.selftest=1`; the in-game tests drive editors with it by slot role.
 - `ScopeSwitch`: rule `redstoneScopeLogger` (plain rule, read by name) -> `com.redstonescope.RecordingSwitch.setOn`, synced
   from `Hooks.tick` only on a change; a missing class/method is logged once + told to ops, nothing else breaks.
@@ -122,4 +129,5 @@ with its default, the hook at the method's start, a missing target fails the bui
   own copy, cache reuse, boot, one rule each of VasTech / Kisde / Bullet, Redstone Scope loaded, clean stop.
   `recipes/`: the custom-recipe editor on its own server with `/uct` (survival op fake players, clicks by slot role).
   `rules/`: our rules on their own server (listed with its default, a Carpet fake player in an end portal stays /
-  goes, items still go, `carpet setDefault` kept over a restart). `FILTER=` skips the parts it does not need.
+  goes, items still go, `carpet setDefault` kept over a restart). `carefulbreak/`: a Carpet fake player mining dirt, drop in the
+  inventory or on the ground per option / rule, the choice kept over a restart. `FILTER=` skips the parts it does not need.

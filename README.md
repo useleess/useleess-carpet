@@ -53,6 +53,20 @@ CarpetSP's rule screen.
 | `customRecipes` | true | Ops can make their own crafting recipes with `/customrecipe` (see below). Off = saved recipes do not match and the command is refused; the recipe files stay. |
 | `redstoneScopeLogger` | true | Redstone Scope records block changes for its tools (sub-tick, waveform, probes, rewind). Off = no recording, no extra work and no Redstone Scope log lines; its commands say it is switched off. |
 
+## Careful break for each player
+
+Kisde Carpet's rule `carefulBreak` puts the blocks a player mines straight into that player's inventory. Useleess Carpet
+lets every player choose when, without a new rule:
+
+1. An op turns the rule on once: `/carpet carefulBreak true` (`/carpet setDefault carefulBreak true` keeps it).
+2. Each player switches it on or off for themselves with `/log carefulBreak` (the same command again switches it off).
+3. `/log carefulBreak sneak` (the default) = only while pressing the Sneak key; `/log carefulBreak always` = every
+   block you mine, no Sneak key needed. Tab completion lists both.
+
+The choice is saved per world (`useleess-carpet/careful-break.json`) and is back when the player joins after a server
+restart. If something goes wrong the server tells the player once and carefulBreak works like in Kisde Carpet (Sneak
+needed).
+
 ## Making your own crafting recipe (ops)
 
 Type `/customrecipe` (operators, permission level 2; survival is fine, no creative mode and no mod on your side).

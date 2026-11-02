@@ -109,8 +109,8 @@ class RulesTest {
         List<String> changed = new ArrayList<>();
         for (String name : master.keySet()) if (!Arrays.equals(master.get(name), rules.get(name))) changed.add(name);
         Collections.sort(changed);
-        assertTrue(changed.containsAll(Arrays.asList("aqh.class", "carpet/CarpetSettings.class", "carpet/CarpetServer.class", "net/minecraft/server/MinecraftServer.class")), changed.toString());
-        assertEquals(6, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList and the player class: " + changed);
+        assertTrue(changed.containsAll(Arrays.asList("aqh.class", "carpet/CarpetSettings.class", "carpet/CarpetServer.class", "net/minecraft/server/MinecraftServer.class", "aow.class", "carpet/logging/LoggerRegistry.class")), changed.toString());
+        assertEquals(8, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList, the player class, aow and LoggerRegistry: " + changed);
         for (String name : rules.keySet()) {
             if (master.containsKey(name)) continue;
             assertTrue(name.startsWith("com/useleess/carpet/server/") || name.startsWith("com/useleess/carpet/core/")
