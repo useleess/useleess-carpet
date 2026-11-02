@@ -51,6 +51,7 @@ CarpetSP's rule screen.
 |---|---|---|
 | `endPortalNoTeleportPlayer` | false | Players touching an end portal stay where they are; items, mobs and other entities still go through (end-portal farms keep working). |
 | `customRecipes` | true | Ops can make their own crafting recipes with `/customrecipe` (see below). Off = saved recipes do not match and the command is refused; the recipe files stay. |
+| `redstoneScopeLogger` | true | Redstone Scope records block changes for its tools (sub-tick, waveform, probes, rewind). Off = no recording, no extra work and no Redstone Scope log lines; its commands say it is switched off. |
 
 ## Making your own crafting recipe (ops)
 

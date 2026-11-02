@@ -30,7 +30,7 @@ class HygieneTest {
     static final Path MAIN = Paths.get("src/main/java");
     static final Path TOOLS = Paths.get("src/tools/java");
     static final Path SERVER = Paths.get("src/server/java");
-    static final Pattern KEY = Pattern.compile("\"((?:log|install|error|gui|editor|list|command|recipes|category|selftest)\\.[a-z0-9_.]+|start|starting)\"");
+    static final Pattern KEY = Pattern.compile("\"((?:log|install|error|gui|editor|list|command|recipes|scope|category|selftest)\\.[a-z0-9_.]+|start|starting)\"");
 
     static List<Path> sources(Path root) throws IOException {
         try (Stream<Path> s = Files.walk(root)) {

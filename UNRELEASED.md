@@ -21,3 +21,6 @@ Collected here until the next release, then used as the GitHub / Modrinth notes.
   the full message still goes to chat.
 - The start script the installer writes now runs Java with `-XX:+UseG1GC` (smoother memory cleanup, fewer lag
   spikes on Java 8) (#1).
+- New rule `redstoneScopeLogger` (default on): off = Redstone Scope records nothing, does no extra work and writes no
+  log lines; its commands say it is switched off. `/carpet setDefault redstoneScopeLogger false` keeps it for the
+  world. The new master jar also makes Redstone Scope's "too many to record" log line quieter (#2).

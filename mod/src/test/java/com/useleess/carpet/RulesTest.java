@@ -141,6 +141,11 @@ class RulesTest {
         assertNull(RulesMaker.hooks("1.12.2").getProperty("customRecipes.method"));
     }
 
+    @Test void redstoneScopeLoggerIsADefaultOnRuleWithoutAHook() throws IOException {
+        assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals("redstoneScopeLogger") && r.byDefault && !r.hooked));
+        assertNull(RulesMaker.hooks("1.12.2").getProperty("redstoneScopeLogger.method"));
+    }
+
     /** A missing target never builds a jar without the rule: the build stops and names what is missing. */
     @Test void aMissingTargetFailsWithItsName() throws IOException {
         Map<String, byte[]> master = jar("useleess.masterJar");

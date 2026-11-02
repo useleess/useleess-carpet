@@ -23,6 +23,7 @@ public final class Hooks {
         Guard.attach(server);
         Guard.run("start", () -> {
             Rule.init();
+            ScopeSwitch.init();
             CustomRecipes.register();
             CommandHandler commands = (CommandHandler) server.getCommandManager();
             commands.registerCommand(new CustomRecipeCommand());
@@ -48,6 +49,7 @@ public final class Hooks {
 
     public static void tick(MinecraftServer server) {
         Guard.run("start", () -> worldsLoaded(server));
+        ScopeSwitch.sync();
         for (int n = NEXT_TICK.size(); n > 0; n--) Guard.run("tick", NEXT_TICK.poll());
     }
 

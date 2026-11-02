@@ -86,6 +86,8 @@
   "list.shaped": "§7Shaped %sx%s",
   "list.shapeless": "§7Any order, %s items",
   "list.confirm_delete": "§cShift-click again to delete",
+  "log.scope_switch_missing": "Rule redstoneScopeLogger cannot reach Redstone Scope's recording switch; the rule does nothing.",
+  "scope.switch_missing": "Carpet rule redstoneScopeLogger does nothing: this server's Redstone Scope has no recording switch. Update the Useleess Carpet server jar.",
   "log.recipes_failed": "Custom recipes stopped at %s and are switched off.",
   "log.catalogue_item_failed": "The variants of item %s could not be listed; offering the plain item.",
   "log.recipe_file_failed": "Recipe file %s could not be written or removed.",

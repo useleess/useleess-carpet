@@ -18,8 +18,8 @@
   },
   {
    "prefix": "rules/",
-   "min": 5,
-   "what": "our own Carpet rules: listed, saved, endPortalNoTeleportPlayer"
+   "min": 8,
+   "what": "our own Carpet rules: listed, saved, endPortalNoTeleportPlayer, redstoneScopeLogger (listed, off/on, saved)"
   },
   {
    "prefix": "recipes/",

@@ -88,6 +88,8 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
   slots, own click handling only), `SearchContainer` + `SearchWindow` (the anvil search), `TitleText` (short window-title statuses, game-free), `Layout` (slot roles),
   `Vault` (saves + empties the real inventory first, restores on exit / close / leave / death / stop / off-switch / next join).
 - `SelfTest`: `/uct`, registered only with `-Duseleess.carpet.selftest=1`; the in-game tests drive editors with it by slot role.
+- `ScopeSwitch`: rule `redstoneScopeLogger` (plain rule, read by name) -> `com.redstonescope.RecordingSwitch.setOn`, synced
+  from `Hooks.tick` only on a change; a missing class/method is logged once + told to ops, nothing else breaks.
 - Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.
 
 ## Per-version layer

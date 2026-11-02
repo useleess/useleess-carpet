@@ -224,7 +224,7 @@ printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\
 RULE=endPortalNoTeleportPlayer
 NOTFOUND="found nothing|cannot be found|No entity|not found|did not match"
 # the whole section ends by this clock time; every wait below is also short on its own and says why it gave up
-RULES_END=$(($(date +%s) + 300))
+RULES_END=$(($(date +%s) + 420))
 ASK_TRIES=12
 rules_late() { [ "$(date +%s)" -ge "$RULES_END" ]; }
 # where UcStay is, for the failure text: the console's answer to a tp onto its own spot, and whether it is in the End
@@ -307,6 +307,35 @@ ask "carpet setDefault $RULE true" "$RULE"
 rules_stop
 ok=1; grep -rq "$RULE true" --include=carpet.conf . && rules_server && ask "carpet $RULE" "$RULE" && sleep 1 && tail -n 8 server.log | grep -q "true" && ok=0
 result rules/saved-in-carpet-conf $ok "$RULE was not true after setDefault + restart ($(cat */carpet.conf 2>/dev/null | tr '\n' ' '))"
+
+# redstoneScopeLogger: Redstone Scope's recording commands answer "switched off" while the rule is false
+SCOPE_RULE=redstoneScopeLogger
+OFFTEXT="switched off"
+# scope_answer: runs a recording command, waits 4 s for its answer, prints whether it said "switched off"
+scope_answer() {
+    before=$(wc -l < server.log); say "rtick back"; sleep 4
+    tail -n +"$((before + 1))" server.log | grep -q "$OFFTEXT" && echo off || echo on
+}
+ok=1; ask "carpet $SCOPE_RULE" "$SCOPE_RULE" && sleep 1 && tail -n 8 server.log | grep -q "true" && ask "carpet list" "$SCOPE_RULE" && ok=0
+result rules/rs-logger-listed $ok "carpet $SCOPE_RULE / carpet list did not show it with true: $(tail -n 6 server.log | tr '\n' ' ')"
+
+ok=1
+if ask "carpet $SCOPE_RULE false" "$SCOPE_RULE"; then
+    n=0; off=1; while [ $n -lt 3 ] && ! rules_late; do [ "$(scope_answer)" = off ] && { off=0; break; }; n=$((n + 1)); done
+    if [ $off = 0 ]; then
+        ask "carpet $SCOPE_RULE true" "$SCOPE_RULE"
+        n=0; while [ $n -lt 3 ] && ! rules_late; do [ "$(scope_answer)" = on ] && { ok=0; break; }; n=$((n + 1)); done
+    fi
+fi
+result rules/rs-logger-off $ok "rtick back did not say '$OFFTEXT' with $SCOPE_RULE false, or still did after true: $(tail -n 6 server.log | tr '\n' ' ')"
+
+ok=1
+ask "carpet setDefault $SCOPE_RULE false" "$SCOPE_RULE"
+rules_stop
+if grep -rq "$SCOPE_RULE false" --include=carpet.conf . && rules_server && ask "carpet $SCOPE_RULE" "$SCOPE_RULE" && sleep 1 && tail -n 8 server.log | grep -q "false"; then
+    n=0; while [ $n -lt 3 ] && ! rules_late; do [ "$(scope_answer)" = off ] && { ok=0; break; }; n=$((n + 1)); done
+fi
+result rules/rs-logger-saved $ok "$SCOPE_RULE was not false and Redstone Scope still recording after setDefault + restart ($(cat */carpet.conf 2>/dev/null | tr '\n' ' '))"
 rules_end
 fi
 
