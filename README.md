@@ -24,10 +24,10 @@ One Carpet server jar for Minecraft **1.12.2** with everything in it:
 
 To update, put the new installer in the server folder and double-click it once: it rebuilds the server jar.
 
-Command line instead (hosts, panels): `java -Xmx2G -jar useleess-carpet-1.12.2-<version>.jar nogui` builds the
+Command line instead (hosts, panels): `java -Xmx2G -XX:+UseG1GC -jar useleess-carpet-1.12.2-<version>.jar nogui` builds the
 server jar and starts the server in the same window; it also makes `start-useleess-carpet.bat` /
 `start-useleess-carpet.sh` and never changes your own scripts. From then on: that script, or
-`java -Xmx2G -jar useleess-carpet-1.12.2-server.jar nogui`.
+`java -Xmx2G -XX:+UseG1GC -jar useleess-carpet-1.12.2-server.jar nogui`.
 
 Java 8 is needed (like any 1.12.2 server).
 

@@ -57,7 +57,7 @@ final class StartScripts {
     /** Writes (or rewrites) our own start script: Java (quoted path or "java"), 2 GB, the server console. */
     static Path create(Path folder, String java, String jarName, boolean windows) throws IOException {
         String javaCmd = java.contains(" ") || java.contains("\\") || java.contains("/") ? "\"" + java + "\"" : java;
-        String run = javaCmd + " -Xmx2G -jar " + jarName + " nogui";
+        String run = javaCmd + " -Xmx2G -XX:+UseG1GC -jar " + jarName + " nogui";
         if (windows) {
             Path p = folder.resolve(NAME_WINDOWS);
             Files.write(p, ("@echo off\r\ncd /d \"%~dp0\"\r\n" + run + "\r\npause\r\n").getBytes(StandardCharsets.UTF_8));

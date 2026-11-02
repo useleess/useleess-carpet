@@ -19,3 +19,5 @@ Collected here until the next release, then used as the GitHub / Modrinth notes.
 - Recipe editor: the search anvil no longer shows an "Enchantment Cost" line.
 - Recipe editor: the window title after Save / Load / Delete is short ("Saved: golden_apple", at most 30 characters);
   the full message still goes to chat.
+- The start script the installer writes now runs Java with `-XX:+UseG1GC` (smoother memory cleanup, fewer lag
+  spikes on Java 8) (#1).

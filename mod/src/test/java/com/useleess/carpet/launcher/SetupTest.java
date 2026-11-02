@@ -57,7 +57,7 @@ class SetupTest {
     @Test void ourScriptIsRewrittenWithTheCurrentJava() throws IOException {
         StartScripts.create(dir, "java", SERVER, true);
         Path again = StartScripts.create(dir, "C:\\jdk8\\bin\\java.exe", SERVER, true);
-        assertTrue(read(again).contains("\"C:\\jdk8\\bin\\java.exe\" -Xmx2G"), read(again));
+        assertTrue(read(again).contains("\"C:\\jdk8\\bin\\java.exe\" -Xmx2G -XX:+UseG1GC"), read(again));
     }
 
     @Test void aScriptAlreadyStartingTheServerJarIsRecognised() throws IOException {
@@ -71,11 +71,11 @@ class SetupTest {
         Path bat = StartScripts.create(dir, "C:\\Program Files\\Java\\jre1.8.0_451\\bin\\java.exe", SERVER, true);
         assertEquals(StartScripts.NAME_WINDOWS, bat.getFileName().toString());
         String text = read(bat);
-        assertTrue(text.contains("\"C:\\Program Files\\Java\\jre1.8.0_451\\bin\\java.exe\" -Xmx2G -jar " + SERVER + " nogui"), text);
+        assertTrue(text.contains("\"C:\\Program Files\\Java\\jre1.8.0_451\\bin\\java.exe\" -Xmx2G -XX:+UseG1GC -jar " + SERVER + " nogui"), text);
         assertTrue(text.contains("cd /d \"%~dp0\"") && text.contains("pause"), text);
         Path sh = StartScripts.create(dir, "java", SERVER, false);
         assertEquals(StartScripts.NAME_OTHER, sh.getFileName().toString());
-        assertTrue(read(sh).contains("exec java -Xmx2G -jar " + SERVER + " nogui"));
+        assertTrue(read(sh).contains("exec java -Xmx2G -XX:+UseG1GC -jar " + SERVER + " nogui"));
     }
 
     @Test void javaVersionsAreRead() {
