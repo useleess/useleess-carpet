@@ -28,3 +28,6 @@ Collected here until the next release, then used as the GitHub / Modrinth notes.
   without the Sneak key, `/log carefulBreak sneak` (the default) only while sneaking, `/log carefulBreak` alone still
   switches it on / off. It needs Kisde's rule `/carpet carefulBreak true`. Each player's choice is remembered over
   server restarts (`useleess-carpet/careful-break.json` in the world folder).
+- The installer window and the server's own messages now come in 13 more languages (Chinese simplified + traditional,
+  Russian, Ukrainian, Spanish, French, Italian, Portuguese (Brazil), Japanese, Korean, Swedish, Turkish, German),
+  following the language of the PC; English otherwise.
