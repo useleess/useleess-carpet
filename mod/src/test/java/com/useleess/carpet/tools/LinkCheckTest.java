@@ -54,4 +54,33 @@ class LinkCheckTest {
         jar.put("x/Ours.class", ours(true));
         assertEquals(new TreeSet<>(), new LinkCheck(jar).check(Collections.singletonList("x/Ours.class")));
     }
+
+    /** A constructor the server's class lacks (the client-only CPacketCustomPayload(String, PacketBuffer), 2026-11-03). */
+    @Test void aMissingConstructorFailsTheCheck() {
+        ClassWriter server = new ClassWriter(0);
+        server.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, "lh", null, "java/lang/Object", null);
+        server.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null).visitEnd();
+        server.visitEnd();
+        Map<String, byte[]> jar = new HashMap<>();
+        jar.put("lh.class", server.toByteArray());
+        ClassWriter w = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        w.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, "x/Ours", null, "java/lang/Object", null);
+        MethodVisitor m = w.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "make", "()V", null, null);
+        m.visitCode();
+        for (String desc : new String[] {"()V", "(Ljava/lang/String;)V"}) {
+            m.visitTypeInsn(Opcodes.NEW, "lh");
+            m.visitInsn(Opcodes.DUP);
+            if (desc.contains("String")) m.visitInsn(Opcodes.ACONST_NULL);
+            m.visitMethodInsn(Opcodes.INVOKESPECIAL, "lh", "<init>", desc, false);
+            m.visitInsn(Opcodes.POP);
+        }
+        m.visitInsn(Opcodes.RETURN);
+        m.visitMaxs(0, 0);
+        m.visitEnd();
+        w.visitEnd();
+        jar.put("x/Ours.class", w.toByteArray());
+        TreeSet<String> problems = new LinkCheck(jar).check(Collections.singletonList("x/Ours.class"));
+        assertEquals(1, problems.size(), problems.toString());
+        assertTrue(problems.first().contains("lh.<init>(Ljava/lang/String;)V"), problems.toString());
+    }
 }

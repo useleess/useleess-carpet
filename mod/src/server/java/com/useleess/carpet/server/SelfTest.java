@@ -1,5 +1,6 @@
 package com.useleess.carpet.server;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.block.BlockWorkbench;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
@@ -7,13 +8,19 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.ClickType;
 import net.minecraft.inventory.Container;
+import net.minecraft.inventory.ItemStackHelper;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.network.play.client.CPacketCustomPayload;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,6 +34,7 @@ import java.util.Locale;
  * open P | cmd P command... (run as the player, with the player's own permission) | state P | click P ROLE [n] [button] [TYPE] | pick P item | typesearch P text | give P item count
  * inv P | close P | craft P item|- x9  (a real crafting table: result, then taken)
  * fall P blocks cheat  (a client falling that far onto the block under P; cheat = always "on the ground")
+ * shulker P found asked count  (LU's request, as its client writes it, for item asked from the box slot holding item found)
  * </pre>
  */
 final class SelfTest extends CommandBase {
@@ -57,6 +65,7 @@ final class SelfTest extends CommandBase {
             case "close": player.closeScreen(); out = "closed"; break;
             case "craft": out = craft(player, args); break;
             case "fall": out = fall(player, Integer.parseInt(args[2]), Boolean.parseBoolean(args[3])); break;
+            case "shulker": out = shulker(player, args); break;
             default: out = "unknown action";
         }
         sender.sendMessage(new TextComponentString(ServerText.get("selftest.line", args[0], out)));
@@ -123,6 +132,46 @@ final class SelfTest extends CommandBase {
             if (!player.inventory.getStackInSlot(i).isEmpty()) parts.add(i + ":" + show(player.inventory.getStackInSlot(i)));
         }
         return parts + " cursor=" + show(player.inventory.getItemStack());
+    }
+
+    /**
+     * Litematica Upgraded's shulker request (message 5, laid out the way LU's client writes it) through the real
+     * processCustomPayload: count of item a[3] from the box slot that holds item a[2]. Answers how many arrived.
+     */
+    private static String shulker(EntityPlayerMP player, String[] a) {
+        Item found = Item.REGISTRY.getObject(new ResourceLocation(a[2]));
+        Item asked = Item.REGISTRY.getObject(new ResourceLocation(a[3]));
+        for (int slot = 0; slot < player.inventory.mainInventory.size(); slot++) {
+            NBTTagCompound tag = player.inventory.mainInventory.get(slot).getSubCompound("BlockEntityTag");
+            if (tag == null) continue;
+            NonNullList<ItemStack> items = NonNullList.withSize(27, ItemStack.EMPTY);
+            ItemStackHelper.loadAllItems(tag, items);
+            for (int inner = 0; inner < items.size(); inner++) {
+                if (items.get(inner).getItem() != found) continue;
+                int before = loose(player, asked);
+                // as it arrives from the network (the packet's two-argument constructor is client-only)
+                PacketBuffer request = new PacketBuffer(Unpooled.buffer());
+                request.writeString(LuProtocol.CHANNEL);
+                request.writeByte(LuProtocol.SHULKER_TAKE).writeByte(slot).writeByte(inner);
+                request.writeInt(Item.getIdFromItem(asked)).writeShort(0).writeByte(Integer.parseInt(a[4]));
+                CPacketCustomPayload packet = new CPacketCustomPayload();
+                try {
+                    packet.readPacketData(request);
+                } catch (IOException e) {
+                    return "unreadable request: " + e;
+                }
+                player.connection.processCustomPayload(packet);
+                return "moved=" + (loose(player, asked) - before);
+            }
+        }
+        return "no box holds " + a[2];
+    }
+
+    /** How many of the item lie loose in the main inventory. */
+    private static int loose(EntityPlayerMP player, Item item) {
+        int n = 0;
+        for (ItemStack s : player.inventory.mainInventory) if (s.getItem() == item) n += s.getCount();
+        return n;
     }
 
     /**

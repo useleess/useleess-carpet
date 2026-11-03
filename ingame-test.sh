@@ -371,6 +371,20 @@ result rules/nofall-on-cheat-hurt $ok "${why:-rule on: the cheat took '$DMG' dam
 ok=1; fall_damage false
 [ -z "$why" ] && [ -n "$DMG" ] && [ "$DMG" = "$HONEST_OFF" ] && ok=0
 result rules/nofall-on-honest-same $ok "${why:-rule on: an honest fall took '$DMG' damage, with the rule off '$HONEST_OFF' ($ANS)}"
+
+# litematicaShulkerRestock: /uct shulker sends Litematica Upgraded's request (as LU's client writes it) through the real
+# processCustomPayload for UcFall, who carries a shulker box with 64 stone in its slot 3
+SH_RULE=litematicaShulkerRestock
+ok=1; ask "carpet $SH_RULE" "$SH_RULE" && sleep 1 && tail -n 8 server.log | grep -q "false" && ask "carpet list" "$SH_RULE" && ok=0
+result rules/shulker-listed $ok "carpet $SH_RULE / carpet list did not show it with false: $(tail -n 6 server.log | tr '\n' ' ')"
+[ -z "$why" ] && { ask 'give UcFall minecraft:white_shulker_box 1 0 {BlockEntityTag:{Items:[{Slot:3b,id:"minecraft:stone",Count:64b,Damage:0s}]}}' "Given|Gave" "$NOTFOUND|rror|Invalid" || why="the shulker box could not be given: $(tail -n 3 server.log | tr '\n' ' ')"; }
+ok=1; [ -z "$why" ] && uct shulker UcFall minecraft:stone minecraft:stone 64 && ans_has "moved=0$" && ok=0
+result rules/shulker-off-refused $ok "${why:-rule off: the request was not refused: $ANS; server log: $(grep -A10 -E "Exception|Error" server.log | tail -n 24 | tr '\n' ' ')}"
+ask "carpet $SH_RULE true" "$SH_RULE"
+ok=1; [ -z "$why" ] && uct shulker UcFall minecraft:stone minecraft:dirt 64 && ans_has "moved=0$" && ok=0
+result rules/shulker-wrong-item-refused $ok "${why:-rule on: a request for dirt from the stone slot was not refused: $ANS}"
+ok=1; [ -z "$why" ] && uct shulker UcFall minecraft:stone minecraft:stone 64 && ans_has "moved=64$" && uct shulker UcFall minecraft:stone minecraft:stone 64 && ans_has "no box holds" && ok=0
+result rules/shulker-on-moves $ok "${why:-rule on: 64 stone did not move out of the box into the inventory, or the box still held stone: $ANS}"
 rules_end
 fi
 

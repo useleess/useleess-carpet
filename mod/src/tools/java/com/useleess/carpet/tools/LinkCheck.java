@@ -98,6 +98,8 @@ final class LinkCheck {
         if (type == null) return false;
         if (!jar.containsKey(owner + ".class")) return javaHasMethod(owner, name, desc);
         for (MethodNode m : type.methods) if (m.name.equals(name) && m.desc.equals(desc)) return true;
+        // constructors are not inherited: a server class without this one (e.g. a client-only one) fails here
+        if (name.equals("<init>")) return false;
         if (type.superName != null && hasMethod(type.superName, name, desc)) return true;
         for (String i : type.interfaces) if (hasMethod(i, name, desc)) return true;
         return false;

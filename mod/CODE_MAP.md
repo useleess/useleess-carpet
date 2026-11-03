@@ -100,6 +100,10 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
 - Anti no-fall: `FallCheck` (rule `antiNoFall`, game-free: a client's "on the ground" counts only with something under
   its feet; a failure is told once, then vanilla) behind `Hooks.onGround`, which `ServerLayer.filter` puts at the start of
   `EntityPlayerMP.handleFalling` (`onGround = Hooks.onGround(this, onGround)`). `Rule.named` reads any of our plain rules.
+- Litematica Upgraded shulker restock: `LuProtocol` (game-free: LU's channel `litematica_upgraded`, message 0 = capabilities
+  out, 5 = shulker request in, byte layout of LU's own messages) + `ShulkerTake` (rule `litematicaShulkerRestock`: tells LU
+  at join / on a change, `Hooks.customPayload` = start of `NetHandlerPlayServer.processCustomPayload`, acts only on the
+  server thread; moves the stack like LU's own server part; a failure = off + told).
 - Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.
 
 ## Per-version layer

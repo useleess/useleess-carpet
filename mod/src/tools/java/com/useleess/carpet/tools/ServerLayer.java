@@ -39,6 +39,7 @@ final class ServerLayer {
     private static final String SERVER = "net/minecraft/server/MinecraftServer";
     private static final String PLAYER_LIST = "net/minecraft/server/management/PlayerList";
     private static final String PLAYER = "net/minecraft/entity/player/EntityPlayerMP";
+    private static final String NET_HANDLER = "net/minecraft/network/NetHandlerPlayServer";
     private static final String SERVER_DESC = "(L" + SERVER + ";)V";
     private static final String PLAYER_DESC = "(L" + PLAYER + ";)V";
 
@@ -74,13 +75,16 @@ final class ServerLayer {
             touched.add(e.getKey());
         }
         jar.put(LANG, Files.readAllBytes(in.lang));
-        hook(jar, names, "carpet/CarpetServer", "onServerLoaded", SERVER_DESC, false, 0, "serverLoaded", SERVER_DESC);
-        hook(jar, names, "carpet/CarpetServer", "tick", SERVER_DESC, true, 0, "tick", SERVER_DESC);
-        hook(jar, names, "carpet/CarpetServer", "playerConnected", PLAYER_DESC, true, 0, "playerJoined", PLAYER_DESC);
+        hook(jar, names, "carpet/CarpetServer", "onServerLoaded", SERVER_DESC, false, "serverLoaded", SERVER_DESC, 0);
+        hook(jar, names, "carpet/CarpetServer", "tick", SERVER_DESC, true, "tick", SERVER_DESC, 0);
+        hook(jar, names, "carpet/CarpetServer", "playerConnected", PLAYER_DESC, true, "playerJoined", PLAYER_DESC, 0);
         // PlayerList.playerLoggedOut (the player is its first argument): before the player data is written
-        hook(jar, names, PLAYER_LIST, "func_72367_e", PLAYER_DESC, true, 1, "playerLeft", PLAYER_DESC);
-        hook(jar, names, SERVER, "func_71260_j", "()V", true, 0, "serverStopping", SERVER_DESC);
-        hook(jar, names, PLAYER, "func_70645_a", "(Lnet/minecraft/util/DamageSource;)V", true, 0, "playerDying", PLAYER_DESC);
+        hook(jar, names, PLAYER_LIST, "func_72367_e", PLAYER_DESC, true, "playerLeft", PLAYER_DESC, 1);
+        hook(jar, names, SERVER, "func_71260_j", "()V", true, "serverStopping", SERVER_DESC, 0);
+        hook(jar, names, PLAYER, "func_70645_a", "(Lnet/minecraft/util/DamageSource;)V", true, "playerDying", PLAYER_DESC, 0);
+        // NetHandlerPlayServer.processCustomPayload: Litematica Upgraded's shulker requests
+        hook(jar, names, NET_HANDLER, "func_147349_a", "(Lnet/minecraft/network/play/client/CPacketCustomPayload;)V", true, "customPayload",
+                "(L" + NET_HANDLER + ";Lnet/minecraft/network/play/client/CPacketCustomPayload;)V", 0, 1);
         // EntityPlayerMP.handleFalling(double, boolean): the client's "on the ground" (local 3) passes Hooks.onGround first
         filter(jar, names, PLAYER, "func_71122_b", "(DZ)V", 3, "onGround", "(L" + PLAYER + ";Z)Z");
         TreeSet<String> broken = new LinkCheck(jar).check(touched);
@@ -103,16 +107,16 @@ final class ServerLayer {
     }
 
     /**
-     * Calls {@code Hooks.<hook>(local)} at a method's start or before each of its returns. The class is turned
+     * Calls {@code Hooks.<hook>(locals...)} at a method's start or before each of its returns. The class is turned
      * into SRG names for the patch and back; the Carpet and Minecraft classes are not link-checked (they are the originals plus one call).
      */
-    private static void hook(Map<String, byte[]> jar, NameBridge names, String owner, String method, String desc, boolean atStart, int local, String hook, String hookDesc) {
+    private static void hook(Map<String, byte[]> jar, NameBridge names, String owner, String method, String desc, boolean atStart, String hook, String hookDesc, int... locals) {
         patch(jar, names, owner, method, desc, target -> {
             if (atStart) {
-                target.instructions.insert(call(local, hook, hookDesc));
+                target.instructions.insert(call(hook, hookDesc, locals));
             } else {
                 for (AbstractInsnNode insn : target.instructions.toArray()) {
-                    if (insn.getOpcode() == Opcodes.RETURN) target.instructions.insertBefore(insn, call(local, hook, hookDesc));
+                    if (insn.getOpcode() == Opcodes.RETURN) target.instructions.insertBefore(insn, call(hook, hookDesc, locals));
                 }
             }
         });
@@ -144,9 +148,9 @@ final class ServerLayer {
         jar.put(entry, names.toObf(writer.toByteArray()));
     }
 
-    private static InsnList call(int local, String hook, String hookDesc) {
+    private static InsnList call(String hook, String hookDesc, int... locals) {
         InsnList list = new InsnList();
-        list.add(new VarInsnNode(Opcodes.ALOAD, local));
+        for (int local : locals) list.add(new VarInsnNode(Opcodes.ALOAD, local));
         list.add(new MethodInsnNode(Opcodes.INVOKESTATIC, HOOKS, hook, hookDesc, false));
         return list;
     }

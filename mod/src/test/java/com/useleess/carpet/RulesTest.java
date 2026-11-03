@@ -110,7 +110,7 @@ class RulesTest {
         for (String name : master.keySet()) if (!Arrays.equals(master.get(name), rules.get(name))) changed.add(name);
         Collections.sort(changed);
         assertTrue(changed.containsAll(Arrays.asList("aqh.class", "carpet/CarpetSettings.class", "carpet/CarpetServer.class", "net/minecraft/server/MinecraftServer.class", "aow.class", "carpet/logging/LoggerRegistry.class")), changed.toString());
-        assertEquals(8, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList, the player class, aow and LoggerRegistry: " + changed);
+        assertEquals(9, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList, the player class, the player's network handler (pa), aow and LoggerRegistry: " + changed);
         for (String name : rules.keySet()) {
             if (master.containsKey(name)) continue;
             assertTrue(name.startsWith("com/useleess/carpet/server/") || name.startsWith("com/useleess/carpet/core/")
@@ -133,7 +133,7 @@ class RulesTest {
             }
         }
         Collections.sort(called);
-        assertEquals(Arrays.asList("onGround", "playerDying", "playerJoined", "playerLeft", "serverLoaded", "serverStopping", "tick"), called);
+        assertEquals(Arrays.asList("customPayload", "onGround", "playerDying", "playerJoined", "playerLeft", "serverLoaded", "serverStopping", "tick"), called);
     }
 
     @Test void customRecipesIsADefaultOnRuleWithoutAHook() throws IOException {
@@ -149,6 +149,11 @@ class RulesTest {
     @Test void antiNoFallIsADefaultOffSurvivalRuleWithoutADataHook() throws IOException {
         assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals("antiNoFall") && !r.byDefault && !r.hooked && r.categories.contains("SURVIVAL")));
         assertNull(RulesMaker.hooks("1.12.2").getProperty("antiNoFall.method"));
+    }
+
+    @Test void litematicaShulkerRestockIsADefaultOffRuleWithoutADataHook() throws IOException {
+        assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals("litematicaShulkerRestock") && !r.byDefault && !r.hooked));
+        assertNull(RulesMaker.hooks("1.12.2").getProperty("litematicaShulkerRestock.method"));
     }
 
     /** handleFalling starts with {@code onGround = Hooks.onGround(this, onGround)}; the rest is the original. */

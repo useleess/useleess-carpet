@@ -18,8 +18,8 @@
   },
   {
    "prefix": "rules/",
-   "min": 12,
-   "what": "our own Carpet rules: listed, saved, endPortalNoTeleportPlayer, redstoneScopeLogger (listed, off/on, saved), antiNoFall (listed, off = vanilla, on = a no-fall cheat is hurt like an honest fall, honest falls unchanged)"
+   "min": 16,
+   "what": "our own Carpet rules: listed, saved, endPortalNoTeleportPlayer, redstoneScopeLogger (listed, off/on, saved), antiNoFall (listed, off = vanilla, on = a no-fall cheat is hurt like an honest fall, honest falls unchanged), litematicaShulkerRestock (listed, off refused, wrong item refused, on moves the stack out of the box)"
   },
   {
    "prefix": "carefulbreak/",

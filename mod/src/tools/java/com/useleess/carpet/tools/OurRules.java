@@ -51,5 +51,8 @@ public final class OurRules {
                     "CREATIVE"),
             Rule.plain("antiNoFall", false,
                     "The server checks itself that a player is standing on something before it ends their fall, so no-fall cheats (a client always saying it is on the ground) still take fall damage.",
+                    "SURVIVAL"),
+            Rule.plain("litematicaShulkerRestock", false,
+                    "Litematica Upgraded's printer and Easy Place may take the items they need out of shulker boxes in the player's inventory (the server moves them; vanilla cannot).",
                     "SURVIVAL")));
 }

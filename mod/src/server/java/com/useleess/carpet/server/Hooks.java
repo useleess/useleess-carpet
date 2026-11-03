@@ -2,6 +2,8 @@ package com.useleess.carpet.server;
 
 import net.minecraft.command.CommandHandler;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.network.NetHandlerPlayServer;
+import net.minecraft.network.play.client.CPacketCustomPayload;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.AxisAlignedBB;
 
@@ -12,7 +14,8 @@ import java.util.Queue;
 
 /**
  * The few places Minecraft and Carpet call into us (patched in by the build, see tools/ServerLayer): server loaded,
- * every tick, player joined / left / dying, server stopping, a player's "on the ground". Each one is guarded: a failure
+ * every tick, player joined / left / dying, server stopping, a player's "on the ground", a
+ * mod's message from a client. Each one is guarded: a failure
  * switches the feature off.
  */
 public final class Hooks {
@@ -58,6 +61,7 @@ public final class Hooks {
         Guard.run("start", () -> worldsLoaded(server));
         ScopeSwitch.sync();
         CarefulBreak.tick(server);
+        ShulkerTake.tick(server);
         for (int n = NEXT_TICK.size(); n > 0; n--) Guard.run("tick", NEXT_TICK.poll());
     }
 
@@ -75,11 +79,16 @@ public final class Hooks {
             Guard.tellIfOp(player);
         });
         CarefulBreak.joined(player);
+        ShulkerTake.joined(player);
     }
 
     public static void playerLeft(EntityPlayerMP player) {
         Guard.run("leave", () -> Editor.end(player, false));
         CarefulBreak.left(player);
+    }
+
+    public static void customPayload(NetHandlerPlayServer handler, CPacketCustomPayload packet) {
+        ShulkerTake.received(handler, packet);
     }
 
     /** EntityPlayerMP.handleFalling, at its start: the client's "on the ground" as the server believes it. */
