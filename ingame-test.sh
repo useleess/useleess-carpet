@@ -281,8 +281,8 @@ fi
 ' ' ')"; }
 [ -z "$why" ] && { until_ok 10 "testforblock 2 4 2 minecraft:end_portal" "Successfully found" "$NOTFOUND|not a valid|is not" || why="no end portal block at 2 4 2 after setblock"; }
 if [ -z "$why" ]; then
-    say "summon item 2.5 4.6 2.5 {Item:{id:\"minecraft:stone\",Count:1b},PickupDelay:32767}"
-    until_ok 10 "$item_ow" "Found " "$NOTFOUND" || why="the dropped item was never seen in the Overworld"
+    # proven by summon's own answer: the portal may send the item to the End before any later testfor sees it
+    ask "summon item 2.5 4.6 2.5 {Item:{id:\"minecraft:stone\",Count:1b},PickupDelay:32767}" "successfully summoned" "rror|Unable|$NOTFOUND" || why="the item was not summoned: $(tail -n 3 server.log | tr '\n' ' ')"
 fi
 gone=1
 if [ -z "$why" ]; then
