@@ -48,5 +48,8 @@ public final class OurRules {
                     "CREATIVE"),
             Rule.plain("redstoneScopeLogger", true,
                     "Redstone Scope records block changes for its tools (sub-tick, waveform, probes, rewind). Off = no recording, no extra work and no Redstone Scope log lines; its commands say it is switched off.",
-                    "CREATIVE")));
+                    "CREATIVE"),
+            Rule.plain("antiNoFall", false,
+                    "The server checks itself that a player is standing on something before it ends their fall, so no-fall cheats (a client always saying it is on the ground) still take fall damage.",
+                    "SURVIVAL")));
 }

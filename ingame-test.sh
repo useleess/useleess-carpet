@@ -148,6 +148,17 @@ until_ok() {
     return 1
 }
 
+# uct <action> <player> [args]: runs /uct; the answer line is in $ANS (empty = no answer within 20 s)
+uct() {
+    before=$(wc -l < server.log); say "uct $*"; n=0; ANS=""
+    while [ $n -lt 40 ]; do
+        ANS="$(tail -n +"$((before + 1))" server.log | grep -E "UCT $1 |Unknown command|Caught previously unhandled|cannot be found|unknown error|Usage: " | head -n 1)"
+        [ -n "$ANS" ] && return 0
+        sleep 0.5; n=$((n + 1))
+    done
+    return 1
+}
+ans_has() { printf '%s' "$ANS" | grep -qE -e "$1"; }
 # rules_server: starts the server of the current folder (again; $SERVER_OPTS = extra Java options) and waits for "Done ("
 rules_server() {
     : > cmds.txt; : > server.log
@@ -221,6 +232,7 @@ R="$BASE/rules"; mkdir -p "$R"; cd "$R" || exit 2
 cp "$A/$SERVER_JAR" .
 echo "eula=true" > eula.txt
 printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=4\nsnooper-enabled=false\nspawn-monsters=false\n' "$((PORT + 1))" > server.properties
+SERVER_OPTS="-Duseleess.carpet.selftest=1"
 RULE=endPortalNoTeleportPlayer
 NOTFOUND="found nothing|cannot be found|No entity|not found|did not match"
 # the whole section ends by this clock time; every wait below is also short on its own and says why it gave up
@@ -336,6 +348,29 @@ if grep -rq "$SCOPE_RULE false" --include=carpet.conf . && rules_server && ask "
     n=0; while [ $n -lt 3 ] && ! rules_late; do [ "$(scope_answer)" = off ] && { ok=0; break; }; n=$((n + 1)); done
 fi
 result rules/rs-logger-saved $ok "$SCOPE_RULE was not false and Redstone Scope still recording after setDefault + restart ($(cat */carpet.conf 2>/dev/null | tr '\n' ' '))"
+
+# antiNoFall: /uct fall replays a client's movement reports for a 10-block fall onto the grass through the real
+# handleFalling: a no-fall cheat says "on the ground" all the way down, an honest client only on landing
+FALL_RULE=antiNoFall
+ok=1; ask "carpet $FALL_RULE" "$FALL_RULE" && sleep 1 && tail -n 8 server.log | grep -q "false" && ask "carpet list" "$FALL_RULE" && ok=0
+result rules/nofall-listed $ok "carpet $FALL_RULE / carpet list did not show it with false: $(tail -n 6 server.log | tr '\n' ' ')"
+# fall_damage <cheat>: the damage of one fall in $DMG (empty = no answer)
+fall_damage() { DMG=""; uct fall UcFall 10 "$1" && DMG="$(printf '%s' "$ANS" | sed -n 's/.*damage=\([0-9.]*\).*/\1/p')"; }
+why=""
+say "player UcFall spawn"
+wait_for server.log "UcFall joined" 60 || why="player UcFall did not join within 60 s: $(tail -n 4 server.log | tr '\n' ' ')"
+# creative until it stands on the grass (the drop from where it joins would hurt it on landing), then survival
+[ -z "$why" ] && { say "tp UcFall 8.5 4 8.5"; say "gamemode creative UcFall"; until_ok 15 "testfor @a[name=UcFall,x=8,y=4,z=8,dx=0,dy=0,dz=0]" "Found UcFall" "$NOTFOUND" || why="UcFall was never seen standing on the grass at 8 4 8: $(tail -n 6 server.log | tr '\n' ' ')"; }
+[ -z "$why" ] && { ask "gamemode survival UcFall" "UcFall|Survival" "$NOTFOUND" || why="UcFall did not switch to survival: $(tail -n 4 server.log | tr '\n' ' ')"; }
+ok=1; fall_damage false; HONEST_OFF="$DMG"; fall_damage true
+[ -z "$why" ] && [ "$DMG" = "0.0" ] && [ -n "$HONEST_OFF" ] && [ "$HONEST_OFF" != "0.0" ] && ok=0
+result rules/nofall-off-cheat-safe $ok "${why:-rule off: the cheat took '$DMG' damage (vanilla: 0.0), the honest fall '$HONEST_OFF' ($ANS)}"
+ok=1; ask "carpet $FALL_RULE true" "$FALL_RULE"; fall_damage true
+[ -z "$why" ] && [ -n "$DMG" ] && [ "$DMG" = "$HONEST_OFF" ] && ok=0
+result rules/nofall-on-cheat-hurt $ok "${why:-rule on: the cheat took '$DMG' damage, an honest fall takes '$HONEST_OFF' ($ANS)}"
+ok=1; fall_damage false
+[ -z "$why" ] && [ -n "$DMG" ] && [ "$DMG" = "$HONEST_OFF" ] && ok=0
+result rules/nofall-on-honest-same $ok "${why:-rule on: an honest fall took '$DMG' damage, with the rule off '$HONEST_OFF' ($ANS)}"
 rules_end
 fi
 
@@ -440,17 +475,6 @@ printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\
 SERVER_OPTS="-Duseleess.carpet.selftest=1"
 RECIPES="world/useleess-carpet/recipes"
 VAULT="world/useleess-carpet/editor"
-# uct <action> <player> [args]: runs /uct; the answer line is in $ANS (empty = no answer within 20 s)
-uct() {
-    before=$(wc -l < server.log); say "uct $*"; n=0; ANS=""
-    while [ $n -lt 40 ]; do
-        ANS="$(tail -n +"$((before + 1))" server.log | grep -E "UCT $1 |Unknown command|Caught previously unhandled|cannot be found|unknown error|Usage: " | head -n 1)"
-        [ -n "$ANS" ] && return 0
-        sleep 0.5; n=$((n + 1))
-    done
-    return 1
-}
-ans_has() { printf '%s' "$ANS" | grep -qE -e "$1"; }
 click() { uct click UcOp "$@"; }
 # until_state <seconds> <pattern>: asks UcOp's editor state until it matches (the state answers at once; this waits for scheduled window changes)
 until_state() {

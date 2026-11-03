@@ -88,6 +88,8 @@
   "list.confirm_delete": "§cShift-click again to delete",
   "log.scope_switch_missing": "Rule redstoneScopeLogger cannot reach Redstone Scope's recording switch; the rule does nothing.",
   "scope.switch_missing": "Carpet rule redstoneScopeLogger does nothing: this server's Redstone Scope has no recording switch. Update the Useleess Carpet server jar.",
+  "log.fall_check_failed": "Rule antiNoFall had a problem and is off until the server restarts; the players' own \"on the ground\" counts again.",
+  "fall.check_failed": "Carpet rule antiNoFall switched itself off after an error (%s): fall damage works as in vanilla until the server restarts. See the server log.",
   "log.recipes_failed": "Custom recipes stopped at %s and are switched off.",
   "log.catalogue_item_failed": "The variants of item %s could not be listed; offering the plain item.",
   "log.recipe_file_failed": "Recipe file %s could not be written or removed.",

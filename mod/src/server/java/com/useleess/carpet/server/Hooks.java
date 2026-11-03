@@ -3,6 +3,7 @@ package com.useleess.carpet.server;
 import net.minecraft.command.CommandHandler;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.math.AxisAlignedBB;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,10 +12,15 @@ import java.util.Queue;
 
 /**
  * The few places Minecraft and Carpet call into us (patched in by the build, see tools/ServerLayer): server loaded,
- * every tick, player joined / left / dying, server stopping. Each one is guarded: a failure switches the feature off.
+ * every tick, player joined / left / dying, server stopping, a player's "on the ground". Each one is guarded: a failure
+ * switches the feature off.
  */
 public final class Hooks {
     private static final Queue<Runnable> NEXT_TICK = new ArrayDeque<>();
+    private static final FallCheck FALL = new FallCheck(Rule.named(FallCheck.RULE), e -> {
+        Guard.LOG.error(ServerText.get("log.fall_check_failed"), e);
+        Guard.notice(ServerText.get("fall.check_failed", String.valueOf(e)));
+    });
 
     private Hooks() {}
 
@@ -74,6 +80,17 @@ public final class Hooks {
     public static void playerLeft(EntityPlayerMP player) {
         Guard.run("leave", () -> Editor.end(player, false));
         CarefulBreak.left(player);
+    }
+
+    /** EntityPlayerMP.handleFalling, at its start: the client's "on the ground" as the server believes it. */
+    public static boolean onGround(EntityPlayerMP player, boolean claimed) {
+        return FALL.onGround(claimed, () -> !player.world.getCollisionBoxes(player, underFeet(player)).isEmpty());
+    }
+
+    /** A thin slab right under the player's box: blocks and solid entities (boats, shulkers) in it carry the player. */
+    private static AxisAlignedBB underFeet(EntityPlayerMP player) {
+        AxisAlignedBB box = player.getEntityBoundingBox();
+        return new AxisAlignedBB(box.minX, box.minY - 0.1, box.minZ, box.maxX, box.minY, box.maxZ);
     }
 
     /** Before the death drops: the real items are back, so the game rules decide what is dropped. */

@@ -97,6 +97,9 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
 - `SelfTest`: `/uct`, registered only with `-Duseleess.carpet.selftest=1`; the in-game tests drive editors with it by slot role.
 - `ScopeSwitch`: rule `redstoneScopeLogger` (plain rule, read by name) -> `com.redstonescope.RecordingSwitch.setOn`, synced
   from `Hooks.tick` only on a change; a missing class/method is logged once + told to ops, nothing else breaks.
+- Anti no-fall: `FallCheck` (rule `antiNoFall`, game-free: a client's "on the ground" counts only with something under
+  its feet; a failure is told once, then vanilla) behind `Hooks.onGround`, which `ServerLayer.filter` puts at the start of
+  `EntityPlayerMP.handleFalling` (`onGround = Hooks.onGround(this, onGround)`). `Rule.named` reads any of our plain rules.
 - Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.
 
 ## Per-version layer
@@ -127,6 +130,7 @@ with its default, the hook at the method's start, a missing target fails the bui
   English in code, version data, no copied code blocks).
 - In-game (`../ingame-test.sh`, test box): the real launcher jar on real servers: download from Mojang, contents,
   own copy, cache reuse, boot, one rule each of VasTech / Kisde / Bullet, Redstone Scope loaded, clean stop.
+  `rules/nofall-*`: `/uct fall` replays a 10-block fall through the real `handleFalling` (cheat / honest).
   `recipes/`: the custom-recipe editor on its own server with `/uct` (survival op fake players, clicks by slot role).
   `rules/`: our rules on their own server (listed with its default, a Carpet fake player in an end portal stays /
   goes, items still go, `carpet setDefault` kept over a restart). `carefulbreak/`: a Carpet fake player mining dirt, drop in the

@@ -120,7 +120,7 @@ class RulesTest {
         assertTrue(rules.containsKey("assets/useleess_carpet/lang/en_us.json"));
     }
 
-    @Test void theSixServerHooksCallOurHooksClass() throws IOException {
+    @Test void theServerHooksCallOurHooksClass() throws IOException {
         Map<String, byte[]> master = jar("useleess.masterJar");
         Map<String, byte[]> rules = jar("useleess.rulesJar");
         List<String> called = new ArrayList<>();
@@ -133,7 +133,7 @@ class RulesTest {
             }
         }
         Collections.sort(called);
-        assertEquals(Arrays.asList("playerDying", "playerJoined", "playerLeft", "serverLoaded", "serverStopping", "tick"), called);
+        assertEquals(Arrays.asList("onGround", "playerDying", "playerJoined", "playerLeft", "serverLoaded", "serverStopping", "tick"), called);
     }
 
     @Test void customRecipesIsADefaultOnRuleWithoutAHook() throws IOException {
@@ -144,6 +144,31 @@ class RulesTest {
     @Test void redstoneScopeLoggerIsADefaultOnRuleWithoutAHook() throws IOException {
         assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals("redstoneScopeLogger") && r.byDefault && !r.hooked));
         assertNull(RulesMaker.hooks("1.12.2").getProperty("redstoneScopeLogger.method"));
+    }
+
+    @Test void antiNoFallIsADefaultOffSurvivalRuleWithoutADataHook() throws IOException {
+        assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals("antiNoFall") && !r.byDefault && !r.hooked && r.categories.contains("SURVIVAL")));
+        assertNull(RulesMaker.hooks("1.12.2").getProperty("antiNoFall.method"));
+    }
+
+    /** handleFalling starts with {@code onGround = Hooks.onGround(this, onGround)}; the rest is the original. */
+    @Test void handleFallingFirstAsksOurHookAboutTheGround() throws IOException {
+        String method = null;
+        for (MethodNode m : node(jar("useleess.rulesJar"), "oq").methods) {
+            AbstractInsnNode[] code = code(m).toArray(new AbstractInsnNode[0]);
+            if (code.length < 4 || !(code[2] instanceof MethodInsnNode) || !((MethodInsnNode) code[2]).name.equals("onGround")) continue;
+            assertNull(method, "one method only");
+            method = m.name + m.desc;
+            assertEquals(Opcodes.ALOAD, code[0].getOpcode());
+            assertEquals(0, ((VarInsnNode) code[0]).var);
+            assertEquals(Opcodes.ILOAD, code[1].getOpcode());
+            assertEquals(3, ((VarInsnNode) code[1]).var);
+            assertEquals("com/useleess/carpet/server/Hooks", ((MethodInsnNode) code[2]).owner);
+            assertEquals("(Loq;Z)Z", ((MethodInsnNode) code[2]).desc);
+            assertEquals(Opcodes.ISTORE, code[3].getOpcode());
+            assertEquals(3, ((VarInsnNode) code[3]).var);
+        }
+        assertEquals("a(DZ)V", method, "EntityPlayerMP.handleFalling (oq a (DZ)V)");
     }
 
     /** A missing target never builds a jar without the rule: the build stops and names what is missing. */

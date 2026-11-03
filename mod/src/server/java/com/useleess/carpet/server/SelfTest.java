@@ -26,6 +26,7 @@ import java.util.Locale;
  * <pre>
  * open P | cmd P command... (run as the player, with the player's own permission) | state P | click P ROLE [n] [button] [TYPE] | pick P item | typesearch P text | give P item count
  * inv P | close P | craft P item|- x9  (a real crafting table: result, then taken)
+ * fall P blocks cheat  (a client falling that far onto the block under P; cheat = always "on the ground")
  * </pre>
  */
 final class SelfTest extends CommandBase {
@@ -55,6 +56,7 @@ final class SelfTest extends CommandBase {
             case "inv": out = inventory(player); break;
             case "close": player.closeScreen(); out = "closed"; break;
             case "craft": out = craft(player, args); break;
+            case "fall": out = fall(player, Integer.parseInt(args[2]), Boolean.parseBoolean(args[3])); break;
             default: out = "unknown action";
         }
         sender.sendMessage(new TextComponentString(ServerText.get("selftest.line", args[0], out)));
@@ -121,6 +123,22 @@ final class SelfTest extends CommandBase {
             if (!player.inventory.getStackInSlot(i).isEmpty()) parts.add(i + ":" + show(player.inventory.getStackInSlot(i)));
         }
         return parts + " cursor=" + show(player.inventory.getItemStack());
+    }
+
+    /**
+     * A client's movement reports for a fall of {@code blocks} blocks (one per block) onto the block P stands on, through
+     * the real {@code handleFalling}; a cheat claims "on the ground" all the way. Full health first; answers the damage.
+     */
+    private static String fall(EntityPlayerMP player, int blocks, boolean cheat) {
+        player.setHealth(player.getMaxHealth());
+        player.hurtResistantTime = 0;
+        player.fallDistance = 0;
+        double ground = player.posY;
+        for (int i = blocks - 1; i >= 0; i--) {
+            player.setPosition(player.posX, ground + i, player.posZ);
+            player.handleFalling(-1, cheat || i == 0);
+        }
+        return "damage=" + (player.getMaxHealth() - player.getHealth());
     }
 
     private static String craft(EntityPlayerMP player, String[] a) {

@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -80,6 +81,8 @@ final class ServerLayer {
         hook(jar, names, PLAYER_LIST, "func_72367_e", PLAYER_DESC, true, 1, "playerLeft", PLAYER_DESC);
         hook(jar, names, SERVER, "func_71260_j", "()V", true, 0, "serverStopping", SERVER_DESC);
         hook(jar, names, PLAYER, "func_70645_a", "(Lnet/minecraft/util/DamageSource;)V", true, 0, "playerDying", PLAYER_DESC);
+        // EntityPlayerMP.handleFalling(double, boolean): the client's "on the ground" (local 3) passes Hooks.onGround first
+        filter(jar, names, PLAYER, "func_71122_b", "(DZ)V", 3, "onGround", "(L" + PLAYER + ";Z)Z");
         TreeSet<String> broken = new LinkCheck(jar).check(touched);
         if (!broken.isEmpty()) {
             throw new IllegalStateException("links that would break on the server:\n  " + String.join("\n  ", broken));
@@ -104,6 +107,30 @@ final class ServerLayer {
      * into SRG names for the patch and back; the Carpet and Minecraft classes are not link-checked (they are the originals plus one call).
      */
     private static void hook(Map<String, byte[]> jar, NameBridge names, String owner, String method, String desc, boolean atStart, int local, String hook, String hookDesc) {
+        patch(jar, names, owner, method, desc, target -> {
+            if (atStart) {
+                target.instructions.insert(call(local, hook, hookDesc));
+            } else {
+                for (AbstractInsnNode insn : target.instructions.toArray()) {
+                    if (insn.getOpcode() == Opcodes.RETURN) target.instructions.insertBefore(insn, call(local, hook, hookDesc));
+                }
+            }
+        });
+    }
+
+    /** At a method's start: {@code arg = Hooks.<hook>(this, arg)} for its boolean argument in {@code local}. */
+    private static void filter(Map<String, byte[]> jar, NameBridge names, String owner, String method, String desc, int local, String hook, String hookDesc) {
+        patch(jar, names, owner, method, desc, target -> {
+            InsnList list = new InsnList();
+            list.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            list.add(new VarInsnNode(Opcodes.ILOAD, local));
+            list.add(new MethodInsnNode(Opcodes.INVOKESTATIC, HOOKS, hook, hookDesc, false));
+            list.add(new VarInsnNode(Opcodes.ISTORE, local));
+            target.instructions.insert(list);
+        });
+    }
+
+    private static void patch(Map<String, byte[]> jar, NameBridge names, String owner, String method, String desc, Consumer<MethodNode> change) {
         String entry = names.obfClass(owner) + ".class";
         byte[] original = jar.get(entry);
         if (original == null) throw new IllegalStateException("the jar has no " + entry);
@@ -111,13 +138,7 @@ final class ServerLayer {
         new ClassReader(names.toSrg(original)).accept(type, 0);
         MethodNode target = type.methods.stream().filter(m -> m.name.equals(method) && m.desc.equals(desc)).findFirst()
                 .orElseThrow(() -> new IllegalStateException(owner + "." + method + desc + " not found in the jar"));
-        if (atStart) {
-            target.instructions.insert(call(local, hook, hookDesc));
-        } else {
-            for (AbstractInsnNode insn : target.instructions.toArray()) {
-                if (insn.getOpcode() == Opcodes.RETURN) target.instructions.insertBefore(insn, call(local, hook, hookDesc));
-            }
-        }
+        change.accept(target);
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         type.accept(writer);
         jar.put(entry, names.toObf(writer.toByteArray()));
