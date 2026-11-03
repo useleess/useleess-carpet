@@ -141,8 +141,8 @@ class RulesTest {
         assertNull(RulesMaker.hooks("1.12.2").getProperty("customRecipes.method"));
     }
 
-    @Test void redstoneScopeLoggerIsADefaultOnRuleWithoutAHook() throws IOException {
-        assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals("redstoneScopeLogger") && r.byDefault && !r.hooked));
+    @Test void redstoneScopeLoggerIsADefaultOffRuleWithoutAHook() throws IOException {
+        assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals("redstoneScopeLogger") && !r.byDefault && !r.hooked));
         assertNull(RulesMaker.hooks("1.12.2").getProperty("redstoneScopeLogger.method"));
     }
 

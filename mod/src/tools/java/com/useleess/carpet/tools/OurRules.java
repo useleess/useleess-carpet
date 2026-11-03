@@ -46,7 +46,7 @@ public final class OurRules {
             Rule.plain("customRecipes", true,
                     "Ops can make their own crafting recipes with /customrecipe (saved per world); off = saved recipes do not match and the command is refused.",
                     "CREATIVE"),
-            Rule.plain("redstoneScopeLogger", true,
+            Rule.plain("redstoneScopeLogger", false,
                     "Redstone Scope records block changes for its tools (sub-tick, waveform, probes, rewind). Off = no recording, no extra work and no Redstone Scope log lines; its commands say it is switched off.",
                     "CREATIVE"),
             Rule.plain("antiNoFall", false,

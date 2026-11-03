@@ -328,8 +328,8 @@ scope_answer() {
     before=$(wc -l < server.log); say "rtick back"; sleep 4
     tail -n +"$((before + 1))" server.log | grep -q "$OFFTEXT" && echo off || echo on
 }
-ok=1; ask "carpet $SCOPE_RULE" "$SCOPE_RULE" && sleep 1 && tail -n 8 server.log | grep -q "true" && ask "carpet list" "$SCOPE_RULE" && ok=0
-result rules/rs-logger-listed $ok "carpet $SCOPE_RULE / carpet list did not show it with true: $(tail -n 6 server.log | tr '\n' ' ')"
+ok=1; ask "carpet $SCOPE_RULE" "$SCOPE_RULE" && sleep 1 && tail -n 8 server.log | grep -q "false" && ask "carpet list" "$SCOPE_RULE" && ok=0
+result rules/rs-logger-listed $ok "carpet $SCOPE_RULE / carpet list did not show it with false (the default, #4): $(tail -n 6 server.log | tr '\n' ' ')"
 
 ok=1
 if ask "carpet $SCOPE_RULE false" "$SCOPE_RULE"; then
@@ -342,12 +342,12 @@ fi
 result rules/rs-logger-off $ok "rtick back did not say '$OFFTEXT' with $SCOPE_RULE false, or still did after true: $(tail -n 6 server.log | tr '\n' ' ')"
 
 ok=1
-ask "carpet setDefault $SCOPE_RULE false" "$SCOPE_RULE"
+ask "carpet setDefault $SCOPE_RULE true" "$SCOPE_RULE"
 rules_stop
-if grep -rq "$SCOPE_RULE false" --include=carpet.conf . && rules_server && ask "carpet $SCOPE_RULE" "$SCOPE_RULE" && sleep 1 && tail -n 8 server.log | grep -q "false"; then
-    n=0; while [ $n -lt 3 ] && ! rules_late; do [ "$(scope_answer)" = off ] && { ok=0; break; }; n=$((n + 1)); done
+if grep -rq "$SCOPE_RULE true" --include=carpet.conf . && rules_server && ask "carpet $SCOPE_RULE" "$SCOPE_RULE" && sleep 1 && tail -n 8 server.log | grep -q "true"; then
+    n=0; while [ $n -lt 3 ] && ! rules_late; do [ "$(scope_answer)" = on ] && { ok=0; break; }; n=$((n + 1)); done
 fi
-result rules/rs-logger-saved $ok "$SCOPE_RULE was not false and Redstone Scope still recording after setDefault + restart ($(cat */carpet.conf 2>/dev/null | tr '\n' ' '))"
+result rules/rs-logger-saved $ok "$SCOPE_RULE was not true and Redstone Scope not recording after setDefault true + restart ($(cat */carpet.conf 2>/dev/null | tr '\n' ' '))"
 
 # antiNoFall: /uct fall replays a client's movement reports for a 10-block fall onto the grass through the real
 # handleFalling: a no-fall cheat says "on the ground" all the way down, an honest client only on landing
