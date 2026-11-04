@@ -1,5 +1,6 @@
 {
  "useleess_carpet": {
+  "accurate.failed": "Carpet rule litematicaAccuratePlacement switched itself off after an error (%s): Litematica Upgraded's blocks are placed as vanilla places them here until the server restarts. See the server log.",
   "careful.failed": "Careful break had a problem and works only while you sneak for now (your choice may not be remembered). See the server log.",
   "careful.load_failed": "Careful break: the saved choices of the players could not be read, so they were not restored. See the server log.",
   "category.brewing": "Brewing",
@@ -68,6 +69,7 @@
   "error.unknown_version": "This Useleess Carpet download does not know Minecraft %s.",
   "error.vanilla_missing_file": "Mojang's server jar is missing %s. Start again; if you put your own copy next to this file, remove it.",
   "error.wrong_vanilla": "Mojang's server jar does not match (got %s, need %s). Start again; if you put your own copy next to this file, remove it.",
+  "fall.check_failed": "Carpet rule antiNoFall switched itself off after an error (%s): fall damage works as in vanilla until the server restarts. See the server log.",
   "gui.agree": "I agree",
   "gui.ask_eula": "To run a Minecraft server you must agree to Mojang's EULA:\n%s\n\nDo you agree?",
   "gui.close": "Close",
@@ -96,15 +98,18 @@
   "list.entry": "§r%s",
   "list.shaped": "§7Shaped %sx%s",
   "list.shapeless": "§7Any order, %s items",
+  "log.accurate_failed": "Rule litematicaAccuratePlacement had a problem and is off until the server restarts.",
   "log.careful_failed": "Careful break could not look up a player's choice; it needs the Sneak key for now.",
   "log.careful_load_failed": "The careful-break choices in %s could not be read; they are not restored.",
   "log.careful_save_failed": "The careful-break choices could not be saved or restored; they are not remembered until the server restarts.",
   "log.catalogue_item_failed": "The variants of item %s could not be listed; offering the plain item.",
+  "log.fall_check_failed": "Rule antiNoFall had a problem and is off until the server restarts; the players' own \"on the ground\" counts again.",
   "log.prefix": "[Useleess Carpet] ",
   "log.recipe_file_failed": "Recipe file %s could not be written or removed.",
   "log.recipes_failed": "Custom recipes stopped at %s and are switched off.",
   "log.restore_failed": "Could not give back the items of %s from the editor folder.",
   "log.scope_switch_missing": "Rule redstoneScopeLogger cannot reach Redstone Scope's recording switch; the rule does nothing.",
+  "log.shulker_failed": "Rule litematicaShulkerRestock had a problem and is off until the server restarts.",
   "log.vault_failed": "Could not save the inventory of %s before opening the editor.",
   "recipes.bad.count": "the result count %s is not 1 to 64",
   "recipes.bad.field": "the field \"%s\" is missing or wrong",
@@ -122,6 +127,7 @@
   "recipes.off_after_error": "Custom recipes were switched off because of an error at %s (%s). The server keeps running; see its log.",
   "scope.switch_missing": "Carpet rule redstoneScopeLogger does nothing: this server's Redstone Scope has no recording switch. Update the Useleess Carpet server jar.",
   "selftest.line": "UCT %s %s",
+  "shulker.failed": "Carpet rule litematicaShulkerRestock switched itself off after an error (%s): Litematica Upgraded can no longer take items out of shulker boxes here until the server restarts. See the server log.",
   "start": "Useleess Carpet %s for Minecraft %s",
   "starting": "Starting the server from %s"
  }
