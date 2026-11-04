@@ -415,6 +415,9 @@ place_test layers "4 13" minecraft:snow_layer "minecraft:snow_layer[layers=8]" "
 place_test chest-first "8 13" minecraft:chest "minecraft:chest[facing=west]" "chest\[facing=west" "a chest did not turn as asked"
 place_test chest-pair "8 14" minecraft:chest "minecraft:chest[facing=east]" "chest\[facing=east" "the second half of a double chest did not turn as asked"
 place_test chest-paired "8 13" minecraft:chest "minecraft:chest[facing=west]" "chest\[facing=east" "the first half of a double chest did not turn with the second"
+place_test lamp "10 13" minecraft:redstone_lamp "minecraft:redstone_lamp" "redstone_lamp" "a lamp could not be placed"
+place_test lever-on "11 13" minecraft:lever "minecraft:lever[facing=up_x,powered=true]" "lever\[.*powered=true" "a lever next to a lamp did not come out switched on"
+place_test lever-powers "10 13" minecraft:redstone_lamp "minecraft:redstone_lamp" "lit_redstone_lamp" "a lever placed on did not light the lamp it touches"
 place_test existing "6 4" minecraft:oak_stairs "minecraft:oak_stairs[facing=west,half=bottom,shape=straight]" "oak_stairs\[facing=east,half=top" "a request changed a block that was already there"
 rules_end
 fi

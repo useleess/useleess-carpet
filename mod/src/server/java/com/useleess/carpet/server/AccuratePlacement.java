@@ -87,7 +87,14 @@ final class AccuratePlacement {
         if (next == null) return false;
         world.setBlockState(pos, next, STATE_ONLY_TO_CLIENTS);
         if (next.getBlock() instanceof BlockChest) pairChest(world, pos, next);
+        if (next.getBlock() instanceof BlockLever) leverSwitched(world, pos, next);
         return true;
+    }
+
+    /** What BlockLever.onBlockActivated does after a flip: what it touches and the block it hangs on hear of it. */
+    private static void leverSwitched(World world, BlockPos pos, IBlockState lever) {
+        world.notifyNeighborsOfStateChange(pos, lever.getBlock(), false);
+        world.notifyNeighborsOfStateChange(pos.offset(lever.getValue(BlockLever.FACING).getFacing().getOpposite()), lever.getBlock(), false);
     }
 
     /** The same block, or its lit / powered twin (an item places the unlit repeater where a schematic has the lit one). */
