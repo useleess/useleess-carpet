@@ -1,5 +1,12 @@
 # Useleess Carpet changelog
 
+## 0.2.1 (beta) - 2026-11-04
+
+- New Carpet rule `antiNoFall` (off by default, category SURVIVAL): the server checks for itself whether a player is standing on something before it ends their fall, so no-fall cheats still take fall damage; honest players notice nothing.
+- Rule `redstoneScopeLogger` is now off by default, like vanilla (#4): Redstone Scope records only on servers that switch it on (`/carpet setDefault redstoneScopeLogger true`).
+- New Carpet rule `litematicaAccuratePlacement` (off by default) (#6): blocks placed by Litematica Upgraded's printer and Easy Place come out in the schematic's exact state (stair halves, open trapdoors and gates, levers switched on), in one click, on UC servers and in CarpetSP worlds.
+- New Carpet rule `litematicaShulkerRestock` (off by default) (#3): Litematica Upgraded's printer and Easy Place can take the items they need out of shulker boxes in your inventory, on UC servers and in CarpetSP worlds.
+
 ## 0.2.0 (beta) - 2026-11-02
 
 - New rule `endPortalNoTeleportPlayer` (Carpet rule, default off): while on, players touching an end portal stay
