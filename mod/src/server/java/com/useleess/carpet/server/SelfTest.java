@@ -12,19 +12,28 @@ import net.minecraft.inventory.ItemStackHelper;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.Packet;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.network.play.client.CPacketConfirmTeleport;
 import net.minecraft.network.play.client.CPacketCustomPayload;
+import net.minecraft.network.play.client.CPacketPlayerTryUseItemOnBlock;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * {@code /uct}: drives the editor of a (fake) player from the console for the in-game tests; registered only when the
@@ -35,9 +44,13 @@ import java.util.Locale;
  * inv P | close P | craft P item|- x9  (a real crafting table: result, then taken)
  * fall P blocks cheat  (a client falling that far onto the block under P; cheat = always "on the ground")
  * shulker P found asked count  (LU's request, as its client writes it, for item asked from the box slot holding item found)
+ * place P x y z item state  (LU's request for that state, then a real click with item on top of the block under x y z; answers the block there)
+ * caps P  (the capabilities bytes LU is told)
  * </pre>
  */
 final class SelfTest extends CommandBase {
+    private static final Set<UUID> TELEPORT_CONFIRMED = new HashSet<>();
+
     static boolean enabled() {
         return System.getProperty("useleess.carpet.selftest") != null;
     }
@@ -66,6 +79,8 @@ final class SelfTest extends CommandBase {
             case "craft": out = craft(player, args); break;
             case "fall": out = fall(player, Integer.parseInt(args[2]), Boolean.parseBoolean(args[3])); break;
             case "shulker": out = shulker(player, args); break;
+            case "place": out = place(player, args); break;
+            case "caps": out = Arrays.toString(LuServer.capabilities()); break;
             default: out = "unknown action";
         }
         sender.sendMessage(new TextComponentString(ServerText.get("selftest.line", args[0], out)));
@@ -149,22 +164,58 @@ final class SelfTest extends CommandBase {
             for (int inner = 0; inner < items.size(); inner++) {
                 if (items.get(inner).getItem() != found) continue;
                 int before = loose(player, asked);
-                // as it arrives from the network (the packet's two-argument constructor is client-only)
-                PacketBuffer request = new PacketBuffer(Unpooled.buffer());
-                request.writeString(LuProtocol.CHANNEL);
+                PacketBuffer request = luMessage();
                 request.writeByte(LuProtocol.SHULKER_TAKE).writeByte(slot).writeByte(inner);
                 request.writeInt(Item.getIdFromItem(asked)).writeShort(0).writeByte(Integer.parseInt(a[4]));
-                CPacketCustomPayload packet = new CPacketCustomPayload();
-                try {
-                    packet.readPacketData(request);
-                } catch (IOException e) {
-                    return "unreadable request: " + e;
-                }
-                player.connection.processCustomPayload(packet);
+                player.connection.processCustomPayload(arrived(new CPacketCustomPayload(), request));
                 return "moved=" + (loose(player, asked) - before);
             }
         }
         return "no box holds " + a[2];
+    }
+
+    /** LU's placement request (message 1, as its client writes it) and a real click, both through the network handler. */
+    private static String place(EntityPlayerMP player, String[] a) {
+        BlockPos pos = new BlockPos(Integer.parseInt(a[2]), Integer.parseInt(a[3]), Integer.parseInt(a[4]));
+        confirmTeleports(player);
+        player.setHeldItem(EnumHand.MAIN_HAND, new ItemStack(Item.REGISTRY.getObject(new ResourceLocation(a[5]))));
+        byte[] state = a[6].getBytes(StandardCharsets.UTF_8);
+        PacketBuffer request = luMessage();
+        request.writeByte(LuProtocol.PLACEMENT_INTENT).writeInt(pos.getX()).writeInt(pos.getY()).writeInt(pos.getZ());
+        request.writeShort(state.length).writeBytes(state);
+        player.connection.processCustomPayload(arrived(new CPacketCustomPayload(), request));
+        PacketBuffer click = new PacketBuffer(Unpooled.buffer());
+        click.writeBlockPos(pos.down()).writeEnumValue(EnumFacing.UP).writeEnumValue(EnumHand.MAIN_HAND);
+        click.writeFloat(0.5f).writeFloat(1).writeFloat(0.5f);
+        player.connection.processTryUseItemOnBlock(arrived(new CPacketPlayerTryUseItemOnBlock(), click));
+        return "state=" + player.world.getBlockState(pos);
+    }
+
+    /**
+     * What a real client answers after a teleport: a fake player never does, and the server ignores clicks until then.
+     * Wrong numbers do nothing; the right one a second time would crash the handler, so once per player.
+     */
+    private static void confirmTeleports(EntityPlayerMP player) {
+        if (!TELEPORT_CONFIRMED.add(player.getUniqueID())) return;
+        for (int id = 0; id < 4096; id++) {
+            PacketBuffer confirm = new PacketBuffer(Unpooled.buffer());
+            confirm.writeVarInt(id);
+            player.connection.processConfirmTeleport(arrived(new CPacketConfirmTeleport(), confirm));
+        }
+    }
+
+    private static PacketBuffer luMessage() {
+        return new PacketBuffer(Unpooled.buffer()).writeString(LuProtocol.CHANNEL);
+    }
+
+    /** A packet as it arrives from the network (the packets' filled-in constructors are client-only). */
+    private static <P extends Packet<?>> P arrived(P packet, PacketBuffer bytes) {
+        try {
+            packet.readPacketData(bytes);
+            return packet;
+        } catch (IOException e) {
+            throw new IllegalStateException("unreadable packet", e);
+        }
     }
 
     /** How many of the item lie loose in the main inventory. */

@@ -28,46 +28,8 @@ final class ShulkerTake {
     static final String RULE = "litematicaShulkerRestock";
     private static final String BOX_TAG = "BlockEntityTag";
     private static final int BOX_SLOTS = 27;
-    private static final BooleanSupplier RULE_ON = Rule.named(RULE);
-    private static boolean told, broken;
 
     private ShulkerTake() {}
-
-    private static boolean on() {
-        return !broken && RULE_ON.getAsBoolean();
-    }
-
-    /** Every tick: a changed rule is told to everyone online. */
-    static void tick(MinecraftServer server) {
-        guarded(server, () -> {
-            boolean on = on();
-            if (on == told) return;
-            told = on;
-            for (EntityPlayerMP p : server.getPlayerList().getPlayers()) tell(p, on);
-        });
-    }
-
-    /** A joining player learns the rule only while it is on (off is LU's own default). */
-    static void joined(EntityPlayerMP player) {
-        guarded(player.mcServer, () -> {
-            if (on()) tell(player, true);
-        });
-    }
-
-    /** NetHandlerPlayServer.processCustomPayload, at its start (it runs once on the network thread, then on the server's). */
-    static void received(NetHandlerPlayServer handler, CPacketCustomPayload packet) {
-        EntityPlayerMP player = handler.player;
-        if (!LuProtocol.CHANNEL.equals(packet.getChannelName()) || !player.mcServer.isCallingFromMinecraftThread()) return;
-        guarded(player.mcServer, () -> {
-            if (!on()) return;
-            LuProtocol.Take take = LuProtocol.take(packet.getBufferData().duplicate().nioBuffer());
-            if (take != null) take(player, take);
-        });
-    }
-
-    private static void tell(EntityPlayerMP player, boolean on) {
-        player.connection.sendPacket(new SPacketCustomPayload(LuProtocol.CHANNEL, new PacketBuffer(Unpooled.wrappedBuffer(LuProtocol.capabilities(on)))));
-    }
 
     /** Moves what fits of the request into the inventory; the rest stays in the box. Returns the number moved. */
     static int take(EntityPlayerMP player, LuProtocol.Take take) {
@@ -103,23 +65,6 @@ final class ShulkerTake {
         if (tag.hasNoTags()) {
             box.removeSubCompound(BOX_TAG);
             if (box.getTagCompound() != null && box.getTagCompound().hasNoTags()) box.setTagCompound(null);
-        }
-    }
-
-    /** A failure: logged, told to the ops once, the feature off for good and LU told so (as far as that still works). */
-    private static void guarded(MinecraftServer server, Runnable action) {
-        if (broken) return;
-        try {
-            action.run();
-        } catch (RuntimeException | LinkageError e) {
-            broken = true;
-            Guard.LOG.error(ServerText.get("log.shulker_failed"), e);
-            Guard.notice(ServerText.get("shulker.failed", String.valueOf(e)));
-            try {
-                for (EntityPlayerMP p : server.getPlayerList().getPlayers()) tell(p, false);
-            } catch (RuntimeException | LinkageError again) {
-                Guard.LOG.error(ServerText.get("log.shulker_failed"), again);
-            }
         }
     }
 }

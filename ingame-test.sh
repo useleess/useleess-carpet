@@ -385,6 +385,37 @@ ok=1; [ -z "$why" ] && uct shulker UcFall minecraft:stone minecraft:dirt 64 && a
 result rules/shulker-wrong-item-refused $ok "${why:-rule on: a request for dirt from the stone slot was not refused: $ANS}"
 ok=1; [ -z "$why" ] && uct shulker UcFall minecraft:stone minecraft:stone 64 && ans_has "moved=64$" && uct shulker UcFall minecraft:stone minecraft:stone 64 && ans_has "no box holds" && ok=0
 result rules/shulker-on-moves $ok "${why:-rule on: 64 stone did not move out of the box into the inventory, or the box still held stone: $ANS}"
+
+# litematicaAccuratePlacement: /uct place sends LU's placement request (as LU's client writes it) and then a real click on
+# the top of the grass for UcFall, so vanilla alone would place every block in its plain ground state
+AC_RULE=litematicaAccuratePlacement
+# place_test id "x z" item state answer-pattern what
+place_test() {
+    ok=1; [ -z "$why" ] && uct place UcFall ${2% *} 4 ${2#* } "$3" "$4" && ans_has "$5" && ok=0
+    result "rules/accurate-$1" $ok "${why:-$6: $ANS; server log: $(grep -A12 -E "Exception|Error" server.log | tail -n 16 | tr '\n' ' ')}"
+}
+ok=1; ask "carpet $AC_RULE" "$AC_RULE" && sleep 1 && tail -n 8 server.log | grep -q "false" && ask "carpet list" "$AC_RULE" && ok=0
+result rules/accurate-listed $ok "carpet $AC_RULE / carpet list did not show it with false: $(tail -n 6 server.log | tr '\n' ' ')"
+ok=1; [ -z "$why" ] && uct caps UcFall && ans_has "\[0, 1, 0, 0, 1, .* 0\]$" && ok=0
+result rules/accurate-caps-off $ok "${why:-rule off: LU was not told accuratePlacement and accurateStates false (flags: printer, accurate, air, shulker): $ANS}"
+place_test off-vanilla "4 4" minecraft:oak_stairs "minecraft:oak_stairs[facing=east,half=top,shape=straight]" "oak_stairs.*half=bottom" "rule off: the request changed the placed stair"
+ask "carpet $AC_RULE true" "$AC_RULE"
+ok=1; [ -z "$why" ] && uct caps UcFall && ans_has "\[0, 1, 1, 0, 1, .* 1\]$" && ok=0
+result rules/accurate-caps-on $ok "${why:-rule on: LU was not told accuratePlacement and accurateStates true: $ANS}"
+place_test stair "6 4" minecraft:oak_stairs "minecraft:oak_stairs[facing=east,half=top,shape=straight]" "oak_stairs\[facing=east,half=top" "a stair clicked onto the ground did not come out top-half and turned east"
+place_test trapdoor "8 4" minecraft:trapdoor "minecraft:trapdoor[facing=south,half=top,open=true]" "trapdoor\[facing=south,half=top,open=true" "a trapdoor did not come out top-half and open"
+place_test gate "10 4" minecraft:fence_gate "minecraft:fence_gate[facing=west,in_wall=false,open=true,powered=false]" "fence_gate\[facing=west,.*open=true" "a fence gate did not come out open"
+place_test lever "12 4" minecraft:lever "minecraft:lever[facing=up_x,powered=true]" "lever\[.*powered=true" "a lever did not come out switched on"
+place_test repeater "4 11" minecraft:repeater "minecraft:powered_repeater[delay=3,facing=north,locked=false]" "minecraft:unpowered_repeater\[delay=3" "a schematic-powered repeater with delay 3 did not come out unpowered with delay 3"
+place_test rail "6 11" minecraft:golden_rail "minecraft:golden_rail[powered=true,shape=east_west]" "golden_rail\[powered=false,shape=east_west" "a powered rail did not come out unpowered and turned as asked"
+place_test dirt "8 11" minecraft:dirt "minecraft:dirt[snowy=false,variant=podzol]" "variant=dirt" "dirt became podzol"
+place_test wool "10 11" minecraft:wool "minecraft:wool[color=red]" "color=white" "white wool changed colour"
+place_test iron "12 11" minecraft:iron_trapdoor "minecraft:iron_trapdoor[facing=north,half=top,open=true]" "iron_trapdoor\[.*half=top,open=false" "an iron trapdoor came out open (only redstone opens it), or its half was not set"
+place_test layers "4 13" minecraft:snow_layer "minecraft:snow_layer[layers=8]" "snow_layer\[layers=1" "one snow layer became more"
+place_test chest-first "8 13" minecraft:chest "minecraft:chest[facing=west]" "chest\[facing=west" "a chest did not turn as asked"
+place_test chest-pair "8 14" minecraft:chest "minecraft:chest[facing=east]" "chest\[facing=east" "the second half of a double chest did not turn as asked"
+place_test chest-paired "8 13" minecraft:chest "minecraft:chest[facing=west]" "chest\[facing=east" "the first half of a double chest did not turn with the second"
+place_test existing "6 4" minecraft:oak_stairs "minecraft:oak_stairs[facing=west,half=bottom,shape=straight]" "oak_stairs\[facing=east,half=top" "a request changed a block that was already there"
 rules_end
 fi
 

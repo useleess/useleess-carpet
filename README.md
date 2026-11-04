@@ -52,7 +52,8 @@ CarpetSP's rule screen.
 | `endPortalNoTeleportPlayer` | false | Players touching an end portal stay where they are; items, mobs and other entities still go through (end-portal farms keep working). |
 | `customRecipes` | true | Ops can make their own crafting recipes with `/customrecipe` (see below). Off = saved recipes do not match and the command is refused; the recipe files stay. |
 | `antiNoFall` | false | The server checks for itself that a player is standing on something before it ends their fall, so no-fall cheats (a client that always says it is on the ground) still take fall damage. Honest players notice nothing. |
-| `litematicaShulkerRestock` | false | Litematica Upgraded's printer and Easy Place may take the items they need out of shulker boxes in the player's inventory (the server moves them; vanilla cannot). Easy Place needs an LU version that asks for it (coming). |
+| `litematicaAccuratePlacement` | false | Blocks placed by Litematica Upgraded's printer and Easy Place get the schematic's exact state (facing, half, open, a lever's switch), but never another block kind, other drops or redstone power. |
+| `litematicaShulkerRestock` | false | Litematica Upgraded's printer and Easy Place may take the items they need out of shulker boxes in the player's inventory (the server moves them; vanilla cannot). |
 | `redstoneScopeLogger` | false | Redstone Scope records block changes for its tools (sub-tick, waveform, probes, rewind). Off = no recording, no extra work and no Redstone Scope log lines; its commands say it is switched off. |
 
 ## Careful break for each player

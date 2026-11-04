@@ -100,10 +100,14 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
 - Anti no-fall: `FallCheck` (rule `antiNoFall`, game-free: a client's "on the ground" counts only with something under
   its feet; a failure is told once, then vanilla) behind `Hooks.onGround`, which `ServerLayer.filter` puts at the start of
   `EntityPlayerMP.handleFalling` (`onGround = Hooks.onGround(this, onGround)`). `Rule.named` reads any of our plain rules.
-- Litematica Upgraded shulker restock: `LuProtocol` (game-free: LU's channel `litematica_upgraded`, message 0 = capabilities
-  out, 5 = shulker request in, byte layout of LU's own messages) + `ShulkerTake` (rule `litematicaShulkerRestock`: tells LU
-  at join / on a change, `Hooks.customPayload` = start of `NetHandlerPlayServer.processCustomPayload`, acts only on the
-  server thread; moves the stack like LU's own server part; a failure = off + told).
+- Litematica Upgraded's channel: `LuProtocol` (game-free: channel `litematica_upgraded`, message 0 = capabilities out,
+  1 = placement request in, 5 = shulker request in, byte layout of LU's own messages, what a client may set) + `LuServer`
+  (tells LU at join / on a change; `Hooks.customPayload` = start of `NetHandlerPlayServer.processCustomPayload`, acts only
+  on the server thread) + `LuFeature` (one rule: on / guarded; a failure = off + told, LU learns it on the next tick).
+  `ShulkerTake` (rule `litematicaShulkerRestock`) moves the stack like LU's own server part. `AccuratePlacement` (rule
+  `litematicaAccuratePlacement`) has no Forge place event: `Hooks.clickStarted` / `clickDone` around
+  `processTryUseItemOnBlock` read the spots with a waiting request (`PendingIntents`, game-free) before and after a click;
+  a changed block = placed by it, it gets the asked state. Keep `LuProtocol`'s property list matched with LU's own.
 - Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.
 
 ## Per-version layer

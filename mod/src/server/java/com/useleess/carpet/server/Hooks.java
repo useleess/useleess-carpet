@@ -15,7 +15,7 @@ import java.util.Queue;
 /**
  * The few places Minecraft and Carpet call into us (patched in by the build, see tools/ServerLayer): server loaded,
  * every tick, player joined / left / dying, server stopping, a player's "on the ground", a
- * mod's message from a client. Each one is guarded: a failure
+ * mod's message from a client, a click on a block. Each one is guarded: a failure
  * switches the feature off.
  */
 public final class Hooks {
@@ -61,7 +61,7 @@ public final class Hooks {
         Guard.run("start", () -> worldsLoaded(server));
         ScopeSwitch.sync();
         CarefulBreak.tick(server);
-        ShulkerTake.tick(server);
+        LuServer.tick(server);
         for (int n = NEXT_TICK.size(); n > 0; n--) Guard.run("tick", NEXT_TICK.poll());
     }
 
@@ -79,16 +79,27 @@ public final class Hooks {
             Guard.tellIfOp(player);
         });
         CarefulBreak.joined(player);
-        ShulkerTake.joined(player);
+        LuServer.joined(player);
     }
 
     public static void playerLeft(EntityPlayerMP player) {
         Guard.run("leave", () -> Editor.end(player, false));
         CarefulBreak.left(player);
+        LuServer.left(player);
     }
 
     public static void customPayload(NetHandlerPlayServer handler, CPacketCustomPayload packet) {
-        ShulkerTake.received(handler, packet);
+        LuServer.received(handler, packet);
+    }
+
+    /** NetHandlerPlayServer.processTryUseItemOnBlock, at its start. */
+    public static void clickStarted(NetHandlerPlayServer handler) {
+        LuServer.click(handler, AccuratePlacement::clickStarted);
+    }
+
+    /** NetHandlerPlayServer.processTryUseItemOnBlock, before each return. */
+    public static void clickDone(NetHandlerPlayServer handler) {
+        LuServer.click(handler, AccuratePlacement::clickDone);
     }
 
     /** EntityPlayerMP.handleFalling, at its start: the client's "on the ground" as the server believes it. */

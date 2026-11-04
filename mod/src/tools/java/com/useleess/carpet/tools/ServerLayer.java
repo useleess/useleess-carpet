@@ -82,9 +82,13 @@ final class ServerLayer {
         hook(jar, names, PLAYER_LIST, "func_72367_e", PLAYER_DESC, true, "playerLeft", PLAYER_DESC, 1);
         hook(jar, names, SERVER, "func_71260_j", "()V", true, "serverStopping", SERVER_DESC, 0);
         hook(jar, names, PLAYER, "func_70645_a", "(Lnet/minecraft/util/DamageSource;)V", true, "playerDying", PLAYER_DESC, 0);
-        // NetHandlerPlayServer.processCustomPayload: Litematica Upgraded's shulker requests
+        // NetHandlerPlayServer.processCustomPayload: Litematica Upgraded's messages
         hook(jar, names, NET_HANDLER, "func_147349_a", "(Lnet/minecraft/network/play/client/CPacketCustomPayload;)V", true, "customPayload",
                 "(L" + NET_HANDLER + ";Lnet/minecraft/network/play/client/CPacketCustomPayload;)V", 0, 1);
+        // NetHandlerPlayServer.processTryUseItemOnBlock: which blocks a click placed, for Litematica Upgraded's accurate placement
+        String click = "(Lnet/minecraft/network/play/client/CPacketPlayerTryUseItemOnBlock;)V", handlerDesc = "(L" + NET_HANDLER + ";)V";
+        hook(jar, names, NET_HANDLER, "func_184337_a", click, true, "clickStarted", handlerDesc, 0);
+        hook(jar, names, NET_HANDLER, "func_184337_a", click, false, "clickDone", handlerDesc, 0);
         // EntityPlayerMP.handleFalling(double, boolean): the client's "on the ground" (local 3) passes Hooks.onGround first
         filter(jar, names, PLAYER, "func_71122_b", "(DZ)V", 3, "onGround", "(L" + PLAYER + ";Z)Z");
         TreeSet<String> broken = new LinkCheck(jar).check(touched);

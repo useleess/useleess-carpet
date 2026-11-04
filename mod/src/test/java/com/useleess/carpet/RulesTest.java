@@ -133,7 +133,7 @@ class RulesTest {
             }
         }
         Collections.sort(called);
-        assertEquals(Arrays.asList("customPayload", "onGround", "playerDying", "playerJoined", "playerLeft", "serverLoaded", "serverStopping", "tick"), called);
+        assertEquals(Arrays.asList("clickDone", "clickStarted", "customPayload", "onGround", "playerDying", "playerJoined", "playerLeft", "serverLoaded", "serverStopping", "tick"), called);
     }
 
     @Test void customRecipesIsADefaultOnRuleWithoutAHook() throws IOException {
