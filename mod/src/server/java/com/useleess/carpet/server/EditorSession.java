@@ -46,6 +46,7 @@ final class EditorSession {
     private ItemStack output = ItemStack.EMPTY;
     private ItemStack selected = ItemStack.EMPTY;
     private boolean anyOrder;
+    private Station station = Station.CRAFTING;
     private Category category = Category.BUILDING;
     private int pickerPage, listPage;
     private String searchText = "", searchDraft = "", editing, pendingDelete;
@@ -71,6 +72,7 @@ final class EditorSession {
     String searchText() { return searchText; }
     String editing() { return editing; }
     boolean anyOrder() { return anyOrder; }
+    Station station() { return station; }
     String title() { return menu.getName(); }
 
     /** Sets the search text as typing it into the anvil's rename field does. */
@@ -200,7 +202,10 @@ final class EditorSession {
                 break;
             }
             case GRID:
-                grid[Layout.gridIndex(slot)] = button == 0 && !selected.isEmpty() ? selected.copy() : button == 1 ? ItemStack.EMPTY : grid[Layout.gridIndex(slot)];
+                gridClick(Layout.gridIndex(slot), button);
+                break;
+            case STATION:
+                switchStation(button == 1 ? -1 : 1);
                 break;
             case OUTPUT:
                 changeOutput(button);
@@ -214,7 +219,7 @@ final class EditorSession {
                 editing = null;
                 break;
             case ORDER:
-                anyOrder = !anyOrder;
+                anyOrder = station == Station.CRAFTING && !anyOrder;
                 break;
             case ALL:
                 mode = Mode.LIST;
@@ -240,6 +245,27 @@ final class EditorSession {
             default:
                 break;
         }
+    }
+
+    /** Left click with an item selected: puts it in the cell; right click: empties it. Cells the station does not use stay empty. */
+    private void gridClick(int cell, int button) {
+        if (!station.uses(cell)) return;
+        if (button == 1) {
+            grid[cell] = ItemStack.EMPTY;
+        } else if (!selected.isEmpty()) {
+            if (station.allows(cell, ItemCodec.stuff(selected).item)) grid[cell] = selected.copy();
+            else say(ServerText.get("editor.bottle_only"), "editor.title.bottle_only");
+        }
+    }
+
+    /** The next (or previous) recipe type: what its cells hold stays, the other cells are emptied; a loaded recipe is let go. */
+    private void switchStation(int by) {
+        station = station.next(by);
+        for (int i = 0; i < 9; i++) {
+            if (!grid[i].isEmpty() && !(station.uses(i) && station.allows(i, ItemCodec.stuff(grid[i]).item))) grid[i] = ItemStack.EMPTY;
+        }
+        if (station != Station.CRAFTING) anyOrder = false;
+        editing = null;
     }
 
     /** Left click with an item selected: sets the result, or one more of it; right click: one less. */
@@ -298,7 +324,8 @@ final class EditorSession {
             Stuff[] cells = recipe.toGrid();
             for (int i = 0; i < 9; i++) grid[i] = cells[i] == null ? ItemStack.EMPTY : ItemCodec.stack(cells[i]);
             output = result;
-            anyOrder = !recipe.shaped;
+            station = Station.of(recipe.kind);
+            anyOrder = recipe.kind == RecipeData.Kind.SHAPELESS;
             editing = recipe.name;
             mode = Mode.EDITOR;
             say(ServerText.get("editor.loaded", recipe.name), "editor.title.loaded", recipe.name);
@@ -322,7 +349,7 @@ final class EditorSession {
         RecipeStore store = RecipeStore.current;
         Stuff[] stuff = new Stuff[9];
         for (int i = 0; i < 9; i++) stuff[i] = ItemCodec.stuff(grid[i]);
-        if (output.isEmpty() || Arrays.stream(stuff).allMatch(s -> s == null)) {
+        if (output.isEmpty() || !station.complete(stuff)) {
             say(ServerText.get("editor.save_empty"), "editor.title.save_empty");
             return;
         }
@@ -333,7 +360,7 @@ final class EditorSession {
         }
         String name = editing != null ? editing : RecipeNames.unique(RecipeNames.of(ItemCodec.stuff(output).item), store.names());
         try {
-            store.save(RecipeData.fromGrid(name, stuff, 3, anyOrder, ItemCodec.product(output)));
+            store.save(station.recipe(name, stuff, anyOrder, ItemCodec.product(output)));
             editing = name;
             say(ServerText.get("editor.saved", name), "editor.title.saved", name);
         } catch (IOException e) {
@@ -344,6 +371,14 @@ final class EditorSession {
 
     /** The name of another recipe (saved or vanilla) that already answers to this grid, or null. */
     private String clashWith(RecipeStore store, Stuff[] stuff) {
+        if (station == Station.SMELTING) {
+            RecipeData saved = store.findSmelting(stuff[station.cell(0)], editing);
+            return saved != null ? saved.name : clashName(StationRecipes.vanillaSmelt(grid[station.cell(0)]));
+        }
+        if (station == Station.BREWING) {
+            RecipeData saved = store.findBrewing(stuff[station.cell(0)], stuff[station.cell(1)], editing);
+            return saved != null ? saved.name : clashName(StationRecipes.vanillaBrew(grid[station.cell(0)], grid[station.cell(1)]));
+        }
         RecipeData saved = store.find(stuff, 3, 3, editing);
         if (saved != null) return saved.name;
         InventoryCrafting inv = new InventoryCrafting(new Container() {
@@ -356,6 +391,11 @@ final class EditorSession {
             if (!(r instanceof CustomRecipes) && r.matches(inv, player.world)) return String.valueOf(CraftingManager.REGISTRY.getNameForObject(r));
         }
         return null;
+    }
+
+    /** A vanilla result as a clash name ("minecraft:iron_ingot/0"), null for none. */
+    private static String clashName(ItemStack result) {
+        return result.isEmpty() ? null : String.valueOf(ItemCodec.stuff(result));
     }
 
     // ------------------------------------------------------------------ what the window shows
@@ -383,12 +423,14 @@ final class EditorSession {
     }
 
     private void renderEditor() {
-        for (int i = 0; i < 9; i++) menu.setInventorySlotContents(Layout.slot(Layout.Role.GRID, i), grid[i].copy());
-        menu.setInventorySlotContents(Layout.slot(Layout.Role.ARROW, 0), named(new ItemStack(Items.ARROW), " "));
+        for (int i = 0; i < 9; i++) {
+            menu.setInventorySlotContents(Layout.slot(Layout.Role.GRID, i), station.uses(i) ? grid[i].copy() : named(new ItemStack(Blocks.STAINED_GLASS_PANE, 1, 7), " "));
+        }
+        button(Layout.Role.STATION, stationIcon(), "editor.button.station", ServerText.get("station." + station.key));
         menu.setInventorySlotContents(Layout.slot(Layout.Role.OUTPUT, 0), output.copy());
         button(Layout.Role.SAVE, Items.EMERALD, "editor.button.save");
         button(Layout.Role.CLEAR, Items.BUCKET, "editor.button.clear");
-        button(Layout.Role.ORDER, Items.REPEATER, "editor.button.order", ServerText.get(anyOrder ? "editor.on" : "editor.off"));
+        if (station == Station.CRAFTING) button(Layout.Role.ORDER, Items.REPEATER, "editor.button.order", ServerText.get(anyOrder ? "editor.on" : "editor.off"));
         button(Layout.Role.ALL, Items.BOOK, "editor.button.all");
         button(Layout.Role.SEARCH, Items.SIGN, "editor.button.search", searchText);
         button(Layout.Role.EXIT, Item.getItemFromBlock(Blocks.BARRIER), "editor.button.exit");
@@ -425,8 +467,8 @@ final class EditorSession {
                 icon = new ItemStack(Item.getItemFromBlock(Blocks.BARRIER));
             }
             List<String> lore = new ArrayList<>();
-            lore.add(r.shaped ? ServerText.get("list.shaped", r.width, r.height) : ServerText.get("list.shapeless", r.ingredients().size()));
-            for (int row = 0; r.shaped && row < r.height; row++) {
+            lore.add(listLine(r));
+            for (int row = 0; r.kind == RecipeData.Kind.SHAPED && row < r.height; row++) {
                 StringBuilder line = new StringBuilder("§7");
                 for (int c = 0; c < r.width; c++) {
                     Stuff s = r.cell(row * r.width + c);
@@ -440,6 +482,23 @@ final class EditorSession {
         button(Layout.Role.BACK, Items.ARROW, "editor.button.back");
         button(Layout.Role.PREV, Items.PAPER, "editor.button.prev");
         button(Layout.Role.NEXT, Items.PAPER, "editor.button.next");
+    }
+
+    private static String listLine(RecipeData r) {
+        switch (r.kind) {
+            case SHAPED: return ServerText.get("list.shaped", r.width, r.height);
+            case SHAPELESS: return ServerText.get("list.shapeless", r.ingredients().size());
+            case SMELTING: return ServerText.get("list.smelting", r.cell(0));
+            default: return ServerText.get("list.brewing", r.cell(0), r.cell(1));
+        }
+    }
+
+    private Item stationIcon() {
+        switch (station) {
+            case SMELTING: return Item.getItemFromBlock(Blocks.FURNACE);
+            case BREWING: return Items.BREWING_STAND;
+            default: return Item.getItemFromBlock(Blocks.CRAFTING_TABLE);
+        }
     }
 
     private void button(Layout.Role role, Item item, String key, Object... args) {

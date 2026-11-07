@@ -30,12 +30,7 @@ public final class CustomRecipes implements IRecipe {
     }
 
     private static RecipeData find(InventoryCrafting inv) {
-        RecipeData[] found = new RecipeData[1];
-        Guard.run("craft", () -> {
-            RecipeStore store = RecipeStore.current;
-            found[0] = store == null || !Rule.on() ? null : store.find(inv);
-        });
-        return found[0];
+        return RecipeStore.live("craft", store -> store.find(inv));
     }
 
     @Override public boolean matches(InventoryCrafting inv, World world) {

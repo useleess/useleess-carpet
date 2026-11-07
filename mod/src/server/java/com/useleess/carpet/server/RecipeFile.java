@@ -11,6 +11,7 @@ import com.google.gson.JsonPrimitive;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -19,7 +20,10 @@ import java.util.Map;
  * {"type": "shaped", "pattern": ["aa", "b "], "key": {"a": {"item": "minecraft:stick", "meta": 0}, ...},
  *  "result": {"item": "minecraft:diamond_sword", "meta": 0, "count": 1, "nbt": "{display:{Name:\"x\"}}"}}
  * {"type": "shapeless", "ingredients": [{"item": ..., "meta": ...}, ...], "result": {...}}
+ * {"type": "smelting", "input": {"item": ..., "meta": ...}, "result": {...}}
+ * {"type": "brewing", "ingredient": {...}, "input": {"item": "minecraft:potion", "meta": 0, "potion": "minecraft:water"}, "result": {...}}
  * </pre>
+ * An item entry may name a potion type ("potion"); without one any potion type is taken.
  * Game-free; every problem is a {@link BadRecipe} with a language key.
  */
 public final class RecipeFile {
@@ -29,8 +33,13 @@ public final class RecipeFile {
 
     public static String write(RecipeData r) {
         JsonObject o = new JsonObject();
-        o.addProperty("type", r.shaped ? "shaped" : "shapeless");
-        if (r.shaped) {
+        o.addProperty("type", r.kind.name().toLowerCase(Locale.ROOT));
+        if (r.kind == RecipeData.Kind.SMELTING) {
+            o.add("input", stuff(r.cell(0)));
+        } else if (r.kind == RecipeData.Kind.BREWING) {
+            o.add("ingredient", stuff(r.cell(0)));
+            o.add("input", stuff(r.cell(1)));
+        } else if (r.kind == RecipeData.Kind.SHAPED) {
             Map<Stuff, Character> letters = new LinkedHashMap<>();
             JsonArray rows = new JsonArray();
             for (int row = 0; row < r.height; row++) {
@@ -64,6 +73,7 @@ public final class RecipeFile {
         JsonObject o = new JsonObject();
         o.addProperty("item", s.item);
         o.addProperty("meta", s.meta);
+        if (s.potion != null) o.addProperty("potion", s.potion);
         return o;
     }
 
@@ -78,6 +88,12 @@ public final class RecipeFile {
         }
         Product result = product(object(o, "result"));
         String type = string(o, "type");
+        if (type.equals("smelting")) return RecipeData.smelting(name, stuff(object(o, "input")), result);
+        if (type.equals("brewing")) {
+            Stuff bottle = stuff(object(o, "input"));
+            if (!Station.bottle(bottle.item)) throw new BadRecipe("recipes.bad.bottle", bottle.item);
+            return RecipeData.brewing(name, stuff(object(o, "ingredient")), bottle, result);
+        }
         if (type.equals("shapeless")) {
             List<Stuff> items = new ArrayList<>();
             for (JsonElement e : array(o, "ingredients")) items.add(stuff(e));
@@ -110,7 +126,7 @@ public final class RecipeFile {
     private static Stuff stuff(JsonElement e) throws BadRecipe {
         if (!e.isJsonObject()) throw new BadRecipe("recipes.bad.item");
         JsonObject o = e.getAsJsonObject();
-        return new Stuff(string(o, "item"), integer(o, "meta", 0));
+        return new Stuff(string(o, "item"), integer(o, "meta", 0), o.has("potion") ? string(o, "potion") : null);
     }
 
     private static Product product(JsonObject o) throws BadRecipe {

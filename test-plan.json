@@ -28,8 +28,23 @@
   },
   {
    "prefix": "recipes/",
-   "min": 19,
-   "what": "op-made custom recipes (rule customRecipes, /customrecipe): survival op opens the one-window editor, category / paging / anvil search, build + save, crafting works, any order, clear, all recipes (load, overwrite, delete), refused saves, exit / close / disconnect / killed server restore the inventory exactly, no item can leave, non-op and rule-off refused, restart keeps recipes, bad file skipped"
+   "min": 36,
+   "what": "op-made custom recipes (rule customRecipes, /customrecipe): survival op opens the one-window editor, category / paging / anvil search, build + save, crafting works, any order, clear, all recipes (load, overwrite, delete), refused saves, exit / close / disconnect / killed server restore the inventory exactly, no item can leave, non-op and rule-off refused, restart keeps recipes, bad file skipped, recipe type button (crafting table / furnace / brewing stand)"
+  },
+  {
+   "prefix": "recipes/furnace-",
+   "min": 6,
+   "what": "furnace recipes (#7): saved, a real furnace smelts them, vanilla smelting kept, a vanilla clash refused, rule off = none, kept over a restart"
+  },
+  {
+   "prefix": "recipes/brewing-",
+   "min": 8,
+   "what": "brewing stand recipes (#8): bottle cell takes bottles only, saved with the potion type, a real brewing stand brews them, the potion type must match, vanilla brewing kept, a vanilla clash refused, rule off = none, kept over a restart"
+  },
+  {
+   "prefix": "recipes/station-",
+   "min": 3,
+   "what": "recipe type button (#7 #8): cycles both ways, each type uses only its own cells, loading a recipe switches to its type"
   }
  ]
 }

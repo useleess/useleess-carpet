@@ -109,8 +109,8 @@ class RulesTest {
         List<String> changed = new ArrayList<>();
         for (String name : master.keySet()) if (!Arrays.equals(master.get(name), rules.get(name))) changed.add(name);
         Collections.sort(changed);
-        assertTrue(changed.containsAll(Arrays.asList("aqh.class", "carpet/CarpetSettings.class", "carpet/CarpetServer.class", "net/minecraft/server/MinecraftServer.class", "aow.class", "carpet/logging/LoggerRegistry.class")), changed.toString());
-        assertEquals(9, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList, the player class, the player's network handler (pa), aow and LoggerRegistry: " + changed);
+        assertTrue(changed.containsAll(Arrays.asList("aqh.class", "carpet/CarpetSettings.class", "carpet/CarpetServer.class", "net/minecraft/server/MinecraftServer.class", "aow.class", "carpet/logging/LoggerRegistry.class", "akh.class", "akp.class")), changed.toString());
+        assertEquals(11, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList, the player class, the player's network handler (pa), aow, LoggerRegistry, PotionHelper (akh) and FurnaceRecipes (akp): " + changed);
         for (String name : rules.keySet()) {
             if (master.containsKey(name)) continue;
             assertTrue(name.startsWith("com/useleess/carpet/server/") || name.startsWith("com/useleess/carpet/core/")
@@ -133,7 +133,40 @@ class RulesTest {
             }
         }
         Collections.sort(called);
-        assertEquals(Arrays.asList("clickDone", "clickStarted", "customPayload", "onGround", "playerDying", "playerJoined", "playerLeft", "serverLoaded", "serverStopping", "tick"), called);
+        assertEquals(Arrays.asList("brewIngredient", "brewResult", "brews", "clickDone", "clickStarted", "customPayload", "onGround", "playerDying", "playerJoined", "playerLeft",
+                "serverLoaded", "serverStopping", "smeltResult", "tick"), called);
+    }
+
+    private static List<String> calls(MethodNode m) {
+        List<String> out = new ArrayList<>();
+        for (AbstractInsnNode i : code(m)) if (i instanceof MethodInsnNode) out.add(((MethodInsnNode) i).owner + "." + ((MethodInsnNode) i).name + ((MethodInsnNode) i).desc);
+        return out;
+    }
+
+    /** The furnace and brewing lookups ask Hooks first and return its answer at once; the rest of each method is Minecraft's own. */
+    @Test void stationLookupsAnswerFromOurHooksFirst() throws IOException {
+        Map<String, byte[]> master = jar("useleess.masterJar");
+        Map<String, byte[]> rules = jar("useleess.rulesJar");
+        String[][] lookups = {{"akp", "smeltResult", "ARETURN"}, {"akh", "brewIngredient", "IRETURN"}, {"akh", "brews", "IRETURN"}, {"akh", "brewResult", "ARETURN"}};
+        for (String[] l : lookups) {
+            MethodNode patched = null, original = null;
+            for (MethodNode m : node(rules, l[0]).methods) {
+                for (AbstractInsnNode i : code(m)) {
+                    if (i instanceof MethodInsnNode && ((MethodInsnNode) i).name.equals(l[1])) patched = m;
+                }
+            }
+            assertNotNull(patched, l[1] + " is called in " + l[0]);
+            for (MethodNode m : node(master, l[0]).methods) if (m.name.equals(patched.name) && m.desc.equals(patched.desc)) original = m;
+            List<Integer> ops = new ArrayList<>();
+            for (AbstractInsnNode i : code(patched)) if (i.getOpcode() >= 0) ops.add(i.getOpcode());
+            int call = 0;
+            while (ops.get(call) != Opcodes.INVOKESTATIC) call++;
+            assertTrue(ops.subList(call, call + 5).contains(l[2].equals("ARETURN") ? Opcodes.ARETURN : Opcodes.IRETURN), l[1] + " answers at once: " + ops);
+            int own = 0;
+            for (AbstractInsnNode i : code(original)) if (i.getOpcode() >= 0) own++;
+            assertEquals(own + call + 5, ops.size(), l[1] + ": the call, the answer and Minecraft's own code, nothing else");
+            assertEquals(calls(original), calls(patched).subList(1, calls(patched).size()), l[1] + ": Minecraft's own calls keep their exact names");
+        }
     }
 
     @Test void customRecipesIsADefaultOnRuleWithoutAHook() throws IOException {

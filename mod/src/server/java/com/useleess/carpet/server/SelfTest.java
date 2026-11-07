@@ -2,6 +2,12 @@ package com.useleess.carpet.server;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.block.BlockWorkbench;
+import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
+import net.minecraft.inventory.ContainerBrewingStand;
+import net.minecraft.item.crafting.FurnaceRecipes;
+import net.minecraft.tileentity.TileEntityBrewingStand;
+import net.minecraft.tileentity.TileEntityFurnace;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
@@ -42,6 +48,9 @@ import java.util.UUID;
  * <pre>
  * open P | cmd P command... (run as the player, with the player's own permission) | state P | click P ROLE [n] [button] [TYPE] | pick P item | typesearch P text | give P item count
  * inv P | close P | craft P item|- x9  (a real crafting table: result, then taken)
+ * smelt P item  (a real furnace above P with coal: whether it takes the item, then what comes out)
+ * brew P ingredient bottle  (a real brewing stand above P with blaze powder: whether it takes the ingredient, then the bottle)
+ * (an item may name its potion type: minecraft:potion@minecraft:water)
  * fall P blocks cheat  (a client falling that far onto the block under P; cheat = always "on the ground")
  * shulker P found asked count  (LU's request, as its client writes it, for item asked from the box slot holding item found)
  * place P x y z item state  (LU's request for that state, then a real click with item on top of the block under x y z; answers the block there)
@@ -77,6 +86,8 @@ final class SelfTest extends CommandBase {
             case "inv": out = inventory(player); break;
             case "close": player.closeScreen(); out = "closed"; break;
             case "craft": out = craft(player, args); break;
+            case "smelt": out = smelt(player, stack(args[2])); break;
+            case "brew": out = brew(player, stack(args[2]), stack(args[3])); break;
             case "fall": out = fall(player, Integer.parseInt(args[2]), Boolean.parseBoolean(args[3])); break;
             case "shulker": out = shulker(player, args); break;
             case "place": out = place(player, args); break;
@@ -87,7 +98,15 @@ final class SelfTest extends CommandBase {
     }
 
     private static String show(ItemStack s) {
-        return s.isEmpty() ? "-" : Item.REGISTRY.getNameForObject(s.getItem()) + "/" + s.getMetadata() + "x" + s.getCount();
+        if (s.isEmpty()) return "-";
+        String potion = ItemCodec.stuff(s).potion;
+        return Item.REGISTRY.getNameForObject(s.getItem()) + "/" + s.getMetadata() + "x" + s.getCount() + (potion == null ? "" : "~" + potion);
+    }
+
+    /** "minecraft:potion@minecraft:water" = that item with that potion type; one of it. */
+    private static ItemStack stack(String spec) {
+        String[] parts = spec.split("@");
+        return ItemCodec.stack(new Stuff(parts[0], 0, parts.length > 1 ? parts[1] : null));
     }
 
     private static String state(EntityPlayerMP player) {
@@ -97,7 +116,7 @@ final class SelfTest extends CommandBase {
         for (int i = 0; i < 9; i++) grid.append(show(s.grid(i))).append(i < 8 ? "," : "");
         return "mode=" + s.mode() + " ready=" + s.ready() + " searchready=" + s.searchReady() + " closed=" + s.closed()
                 + " category=" + s.category().key + " page=" + s.pickerPage() + " search=[" + s.searchText() + "] editing=" + s.editing()
-                + " anvil=[" + s.anvilName() + "] cost=" + s.anvilCost() + " anyorder=" + s.anyOrder() + " title=[" + s.title() + "] grid=" + grid + " output=" + show(s.output())
+                + " anvil=[" + s.anvilName() + "] cost=" + s.anvilCost() + " anyorder=" + s.anyOrder() + " station=" + s.station() + " title=[" + s.title() + "] grid=" + grid + " output=" + show(s.output())
                 + " selected=" + show(s.selected()) + " picker0=" + show(s.pickerStack(0)) + " list0=" + show(s.menuStack(0))
                 + " recipes=" + RecipeStore.current.names();
     }
@@ -120,7 +139,7 @@ final class SelfTest extends CommandBase {
     /** Selects an item in the picker by clicking: category button until its category, next page until its page. */
     private static String pick(EntityPlayerMP player, String item) {
         EditorSession s = Editor.get(player);
-        ItemStack want = new ItemStack(Item.REGISTRY.getObject(new ResourceLocation(item)));
+        ItemStack want = stack(item);
         Category target = Catalogue.categoryOf(want);
         while (s.searchText().isEmpty() && s.category() != target) player.openContainer.slotClick(Layout.slot(Layout.Role.CATEGORY, 0), 0, ClickType.PICKUP, player);
         List<Catalogue.Entry> list = Catalogue.filter(target, s.searchText());
@@ -239,6 +258,37 @@ final class SelfTest extends CommandBase {
             player.handleFalling(-1, cheat || i == 0);
         }
         return "damage=" + (player.getMaxHealth() - player.getHealth());
+    }
+
+    /** A furnace 3 blocks above P (taken away again): the item and coal in, ticked until something comes out. */
+    private static String smelt(EntityPlayerMP player, ItemStack input) {
+        BlockPos pos = new BlockPos(player).up(3);
+        player.world.setBlockState(pos, Blocks.FURNACE.getDefaultState());
+        TileEntityFurnace furnace = (TileEntityFurnace) player.world.getTileEntity(pos);
+        boolean takes = !FurnaceRecipes.instance().getSmeltingResult(input).isEmpty();
+        furnace.setInventorySlotContents(0, input);
+        furnace.setInventorySlotContents(1, new ItemStack(Items.COAL));
+        for (int t = 0; t < 600 && furnace.getStackInSlot(2).isEmpty(); t++) furnace.update();
+        String out = "takes=" + takes + " result=" + show(furnace.getStackInSlot(2));
+        furnace.clear();
+        player.world.setBlockToAir(pos);
+        return out;
+    }
+
+    /** A brewing stand 3 blocks above P (taken away again): ingredient, bottle and blaze powder in, ticked until it brewed. */
+    private static String brew(EntityPlayerMP player, ItemStack ingredient, ItemStack bottle) {
+        BlockPos pos = new BlockPos(player).up(3);
+        player.world.setBlockState(pos, Blocks.BREWING_STAND.getDefaultState());
+        TileEntityBrewingStand stand = (TileEntityBrewingStand) player.world.getTileEntity(pos);
+        boolean takes = new ContainerBrewingStand(player.inventory, stand).getSlot(3).isItemValid(ingredient);
+        stand.setInventorySlotContents(3, ingredient);
+        stand.setInventorySlotContents(0, bottle.copy());
+        stand.setInventorySlotContents(4, new ItemStack(Items.BLAZE_POWDER));
+        for (int t = 0; t < 600 && ItemStack.areItemStacksEqual(stand.getStackInSlot(0), bottle); t++) stand.update();
+        String out = "takes=" + takes + " result=" + show(stand.getStackInSlot(0)) + " ingredient_left=" + show(stand.getStackInSlot(3));
+        stand.clear();
+        player.world.setBlockToAir(pos);
+        return out;
     }
 
     private static String craft(EntityPlayerMP player, String[] a) {

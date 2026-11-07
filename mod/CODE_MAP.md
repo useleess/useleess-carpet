@@ -81,11 +81,17 @@ commands + the recipe only) / `tick` (first tick: the world folder; then `Hooks.
 `addScheduledTask` runs at once on the server thread) / `playerConnected`, `PlayerList.playerLoggedOut` (before the
 player data is written), `MinecraftServer.stopServer`, `EntityPlayerMP.onDeath` (before the drops)) and `tools/LinkCheck` proves every class / method / field used exists and every abstract method our classes inherit has a
 body (Forge's compile jar gives some `IRecipe` methods default bodies the server does not have), else the build fails.
-- Game-free (unit tests): `Stuff`, `Product`, `RecipeData` (grid trimming, shaped / any-order matching), `RecipeFile` (our
+- Game-free (unit tests): `Stuff` (item + meta + potion type), `Product`, `RecipeData` (kinds shaped / shapeless / smelting /
+  brewing; grid trimming, matching), `Station` (the editor's recipe type: crafting table / furnace / brewing stand, which
+  grid cells each uses, bottle-only cell), `RecipeFile` (our
   JSON format, a bad file = `BadRecipe` with a language key), `RecipeNames`, `ServerText` (English from the lang file).
 - `Hooks` -> `Guard` (every entry runs guarded: a failure logs, ends open editors and switches the feature off; notices go
   to ops), `Rule` (reads `carpet.CarpetSettings.customRecipes`, a plain rule without hook), `RecipeStore` (files, live list),
-  `CustomRecipes` (the ONE `IRecipe` registered in `CraftingManager.REGISTRY`; asks the store at match time), `ItemCodec`,
+  `CustomRecipes` (the ONE `IRecipe` registered in `CraftingManager.REGISTRY`; asks the store at match time), `StationRecipes`
+  (furnace + brewing stand: `Hooks.smeltResult / brewIngredient / brews / brewResult` answer at the start of
+  `FurnaceRecipes.getSmeltingResult` and `PotionHelper.isReagent / hasConversions / doReaction`, so furnaces, brewing
+  stands, their slots and hoppers take saved recipes; null / false = Minecraft's own code runs; `vanillaSmelt` / `vanillaBrew`
+  ask Minecraft alone for the editor's clash check; `RecipeStore.live` = the guarded lookup all of them share), `ItemCodec`,
   `Catalogue` + `Category` (picker items), `CustomRecipeCommand` (`/customrecipe`, level 2).
 - The editor: `Editor` (open sessions), `EditorSession` (all state + every click; shows itself through two fake
   inventories, so the real inventory is never part of the window), `EditorContainer` (chest window, 27 menu + 36 picker
@@ -109,6 +115,7 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
   `processTryUseItemOnBlock` read the spots with a waiting request (`PendingIntents`, game-free) before and after a click;
   a changed block = placed by it, it gets the asked state. Keep `LuProtocol`'s property list matched with LU's own.
 - Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.
+  `answer(...)` = a hook whose answer (non-null object / true) the patched method returns at once (it adds the jump's frame).
 
 ## Per-version layer
 

@@ -6,9 +6,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.JsonToNBT;
 import net.minecraft.nbt.NBTException;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.init.PotionTypes;
+import net.minecraft.potion.PotionType;
+import net.minecraft.potion.PotionUtils;
 import net.minecraft.util.ResourceLocation;
 
-/** Items as recipe data (registry name + meta, NBT as SNBT) and back. */
+/** Items as recipe data (registry name + meta + potion type, NBT as SNBT) and back. */
 final class ItemCodec {
     private ItemCodec() {}
 
@@ -19,7 +22,13 @@ final class ItemCodec {
     /** The recipe ingredient for a stack, or null for an empty one. */
     static Stuff stuff(ItemStack stack) {
         if (stack.isEmpty()) return null;
-        return new Stuff(Item.REGISTRY.getNameForObject(stack.getItem()).toString(), stack.getMetadata());
+        PotionType potion = PotionUtils.getPotionFromItem(stack);
+        return new Stuff(Item.REGISTRY.getNameForObject(stack.getItem()).toString(), stack.getMetadata(),
+                potion == PotionTypes.EMPTY ? null : String.valueOf(PotionType.REGISTRY.getNameForObject(potion)));
+    }
+
+    private static boolean potionExists(String potion) {
+        return potion == null || PotionType.REGISTRY.containsKey(new ResourceLocation(potion));
     }
 
     static Stuff[] grid(InventoryCrafting inv) {
@@ -37,7 +46,8 @@ final class ItemCodec {
     /** One item of that kind (a wildcard meta gives meta 0). */
     static ItemStack stack(Stuff s) {
         if (!exists(s.item)) return ItemStack.EMPTY;
-        return new ItemStack(Item.REGISTRY.getObject(new ResourceLocation(s.item)), 1, s.meta == Stuff.ANY_META ? 0 : s.meta);
+        ItemStack stack = new ItemStack(Item.REGISTRY.getObject(new ResourceLocation(s.item)), 1, s.meta == Stuff.ANY_META ? 0 : s.meta);
+        return s.potion == null || !potionExists(s.potion) ? stack : PotionUtils.addPotionToItemStack(stack, PotionType.getPotionTypeForName(s.potion));
     }
 
     static ItemStack stack(Product p) throws BadRecipe {
@@ -53,9 +63,12 @@ final class ItemCodec {
         return stack;
     }
 
-    /** Throws when a file names an item this server does not have, or an NBT it cannot read. */
+    /** Throws when a file names an item or potion type this server does not have, or an NBT it cannot read. */
     static void check(RecipeData r) throws BadRecipe {
         stack(r.result);
-        for (Stuff s : r.ingredients()) if (!exists(s.item)) throw new BadRecipe("recipes.bad.item_unknown", s.item);
+        for (Stuff s : r.ingredients()) {
+            if (!exists(s.item)) throw new BadRecipe("recipes.bad.item_unknown", s.item);
+            if (!potionExists(s.potion)) throw new BadRecipe("recipes.bad.potion_unknown", s.potion);
+        }
     }
 }

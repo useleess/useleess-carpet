@@ -2,6 +2,7 @@ package com.useleess.carpet.server;
 
 import net.minecraft.command.CommandHandler;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
 import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.play.client.CPacketCustomPayload;
 import net.minecraft.server.MinecraftServer;
@@ -15,7 +16,7 @@ import java.util.Queue;
 /**
  * The few places Minecraft and Carpet call into us (patched in by the build, see tools/ServerLayer): server loaded,
  * every tick, player joined / left / dying, server stopping, a player's "on the ground", a
- * mod's message from a client, a click on a block. Each one is guarded: a failure
+ * mod's message from a client, a click on a block, the furnace's and the brewing stand's recipe lookups. Each one is guarded: a failure
  * switches the feature off.
  */
 public final class Hooks {
@@ -111,6 +112,26 @@ public final class Hooks {
     private static AxisAlignedBB underFeet(EntityPlayerMP player) {
         AxisAlignedBB box = player.getEntityBoundingBox();
         return new AxisAlignedBB(box.minX, box.minY - 0.1, box.minZ, box.maxX, box.minY, box.maxZ);
+    }
+
+    /** FurnaceRecipes.getSmeltingResult, at its start: a saved furnace recipe's result, null = Minecraft's own. */
+    public static ItemStack smeltResult(ItemStack input) {
+        return StationRecipes.smeltResult(input);
+    }
+
+    /** PotionHelper.isReagent, at its start: true = a saved brewing recipe's ingredient (else Minecraft's own answer). */
+    public static boolean brewIngredient(ItemStack stack) {
+        return StationRecipes.ingredient(stack);
+    }
+
+    /** PotionHelper.hasConversions, at its start: true = a saved brewing recipe brews this bottle. */
+    public static boolean brews(ItemStack bottle, ItemStack ingredient) {
+        return StationRecipes.brews(bottle, ingredient);
+    }
+
+    /** PotionHelper.doReaction, at its start: a saved brewing recipe's result for the bottle, null = Minecraft's own. */
+    public static ItemStack brewResult(ItemStack ingredient, ItemStack bottle) {
+        return StationRecipes.brewResult(ingredient, bottle);
     }
 
     /** Before the death drops: the real items are back, so the game rules decide what is dropped. */

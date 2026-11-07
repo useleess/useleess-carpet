@@ -5,6 +5,7 @@ import com.useleess.carpet.server.Product;
 import com.useleess.carpet.server.RecipeData;
 import com.useleess.carpet.server.RecipeFile;
 import com.useleess.carpet.server.RecipeNames;
+import com.useleess.carpet.server.Station;
 import com.useleess.carpet.server.Stuff;
 import com.useleess.carpet.server.TitleText;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ class RecipeTest {
 
     @Test void gridIsTrimmedToItsPattern() {
         RecipeData r = sword();
-        assertTrue(r.shaped);
+        assertEquals(RecipeData.Kind.SHAPED, r.kind);
         assertEquals(1, r.width);
         assertEquals(3, r.height);
         assertEquals(DIAMOND, r.cell(0));
@@ -55,7 +56,7 @@ class RecipeTest {
 
     @Test void shapelessMatchesInAnyOrder() {
         RecipeData r = RecipeData.fromGrid("any", grid(DIAMOND, STICK, STICK), 3, true, SWORD);
-        assertFalse(r.shaped);
+        assertEquals(RecipeData.Kind.SHAPELESS, r.kind);
         assertTrue(r.matches(grid(STICK, null, DIAMOND, null, null, STICK), 3, 3));
         assertFalse(r.matches(grid(STICK, DIAMOND), 3, 3));
         assertFalse(r.matches(grid(STICK, DIAMOND, DIAMOND), 3, 3));
@@ -86,7 +87,7 @@ class RecipeTest {
         String text = RecipeFile.write(r);
         assertTrue(text.contains("\"shaped\"") && text.contains("\"pattern\""));
         RecipeData back = RecipeFile.read("sword", text);
-        assertEquals(r.shaped, back.shaped);
+        assertEquals(r.kind, back.kind);
         assertEquals(1, back.width);
         assertEquals(3, back.height);
         for (int i = 0; i < 3; i++) assertEquals(r.cell(i), back.cell(i));
@@ -97,8 +98,97 @@ class RecipeTest {
     @Test void shapelessFileRoundTrip() throws BadRecipe {
         RecipeData r = RecipeData.fromGrid("any", grid(DIAMOND, STICK, null, STICK), 3, true, SWORD);
         RecipeData back = RecipeFile.read("any", RecipeFile.write(r));
-        assertFalse(back.shaped);
+        assertEquals(RecipeData.Kind.SHAPELESS, back.kind);
         assertEquals(r.ingredients(), back.ingredients());
+    }
+
+    static final Stuff WATER = new Stuff("minecraft:potion", 0, "minecraft:water"), AWKWARD = new Stuff("minecraft:potion", 0, "minecraft:awkward");
+    static final Product NUGGETS = new Product("minecraft:gold_nugget", 0, 3, null);
+
+    @Test void potionTypeMustMatchWhenNamed() {
+        assertTrue(WATER.accepts(WATER));
+        assertFalse(WATER.accepts(AWKWARD));
+        assertTrue(new Stuff("minecraft:potion", 0).accepts(AWKWARD), "no potion type named = any");
+        assertFalse(WATER.accepts(null));
+        assertNotEquals(WATER, AWKWARD);
+        RecipeData tipped = RecipeData.fromGrid("t", grid(WATER, STICK), 3, true, SWORD);
+        assertTrue(tipped.matches(grid(STICK, WATER), 3, 3));
+        assertFalse(tipped.matches(grid(STICK, AWKWARD), 3, 3));
+    }
+
+    @Test void smeltingMatchesOnlyItsItemAndNeverACraftingGrid() {
+        RecipeData r = RecipeData.smelting("s", DIAMOND, NUGGETS);
+        assertTrue(r.smelts(DIAMOND));
+        assertFalse(r.smelts(STICK));
+        assertFalse(r.smelts(null));
+        assertFalse(r.matches(grid(DIAMOND), 3, 3), "a furnace recipe is not a crafting recipe");
+        assertFalse(r.brews(DIAMOND, WATER));
+        assertFalse(sword().smelts(DIAMOND));
+    }
+
+    @Test void brewingNeedsIngredientAndBottle() {
+        RecipeData r = RecipeData.brewing("b", DIAMOND, WATER, NUGGETS);
+        assertTrue(r.brews(DIAMOND, WATER));
+        assertFalse(r.brews(DIAMOND, AWKWARD));
+        assertFalse(r.brews(STICK, WATER));
+        assertFalse(r.brews(DIAMOND, null));
+        assertFalse(r.matches(grid(DIAMOND, WATER), 3, 3));
+        assertFalse(r.smelts(DIAMOND));
+    }
+
+    @Test void stationsUseTheirOwnCells() {
+        Stuff[] g = new Stuff[9];
+        assertFalse(Station.SMELTING.complete(g));
+        g[Station.SMELTING.cell(0)] = DIAMOND;
+        assertTrue(Station.SMELTING.complete(g));
+        assertTrue(Station.CRAFTING.complete(g));
+        assertFalse(Station.BREWING.complete(g));
+        assertTrue(Station.SMELTING.uses(4) && !Station.SMELTING.uses(0));
+        assertTrue(Station.BREWING.uses(1) && Station.BREWING.uses(7) && !Station.BREWING.uses(4));
+        for (int i = 0; i < 9; i++) assertTrue(Station.CRAFTING.uses(i));
+        assertFalse(Station.BREWING.allows(Station.BREWING.cell(1), "minecraft:diamond"), "the bottle slot takes bottles only");
+        assertTrue(Station.BREWING.allows(Station.BREWING.cell(1), "minecraft:splash_potion"));
+        assertTrue(Station.BREWING.allows(Station.BREWING.cell(0), "minecraft:diamond"));
+        assertTrue(Station.SMELTING.allows(4, "minecraft:diamond"));
+        assertEquals(Station.CRAFTING, Station.BREWING.next(1));
+        assertEquals(Station.BREWING, Station.CRAFTING.next(-1));
+        assertEquals(Station.SMELTING, Station.of(RecipeData.Kind.SMELTING));
+        assertEquals(Station.CRAFTING, Station.of(RecipeData.Kind.SHAPELESS));
+    }
+
+    @Test void stationRecipesComeFromTheEditorGridAndGoBack() {
+        Stuff[] g = new Stuff[9];
+        g[1] = DIAMOND;
+        g[7] = WATER;
+        RecipeData brew = Station.BREWING.recipe("b", g, false, NUGGETS);
+        assertEquals(RecipeData.Kind.BREWING, brew.kind);
+        assertArrayEquals(g, brew.toGrid());
+        Stuff[] s = new Stuff[9];
+        s[4] = DIAMOND;
+        RecipeData smelt = Station.SMELTING.recipe("s", s, true, NUGGETS);
+        assertEquals(RecipeData.Kind.SMELTING, smelt.kind);
+        assertArrayEquals(s, smelt.toGrid());
+        assertEquals(RecipeData.Kind.SHAPELESS, Station.CRAFTING.recipe("c", s, true, NUGGETS).kind);
+    }
+
+    @Test void smeltingAndBrewingFileRoundTrip() throws BadRecipe {
+        RecipeData smelt = RecipeData.smelting("s", PLANK, NUGGETS);
+        String text = RecipeFile.write(smelt);
+        assertTrue(text.contains("\"smelting\"") && text.contains("\"input\""));
+        RecipeData back = RecipeFile.read("s", text);
+        assertEquals(RecipeData.Kind.SMELTING, back.kind);
+        assertEquals(PLANK, back.cell(0));
+        assertEquals(NUGGETS, back.result);
+        assertEquals(text, RecipeFile.write(back));
+        RecipeData brew = RecipeData.brewing("b", DIAMOND, WATER, NUGGETS);
+        text = RecipeFile.write(brew);
+        assertTrue(text.contains("\"brewing\"") && text.contains("\"potion\": \"minecraft:water\""));
+        back = RecipeFile.read("b", text);
+        assertEquals(RecipeData.Kind.BREWING, back.kind);
+        assertEquals(DIAMOND, back.cell(0));
+        assertEquals(WATER, back.cell(1));
+        assertEquals(text, RecipeFile.write(back));
+        assertFalse(RecipeFile.write(sword()).contains("potion"), "no potion line for plain items");
     }
 
     @Test void resultNbtAndCountSurvive() throws BadRecipe {
@@ -119,6 +209,9 @@ class RecipeTest {
         assertBad("recipes.bad.ingredients", "{\"type\":\"shapeless\",\"ingredients\":[],\"result\":{\"item\":\"a:b\"}}");
         assertBad("recipes.bad.count", "{\"type\":\"shapeless\",\"ingredients\":[{\"item\":\"a:b\"}],\"result\":{\"item\":\"a:b\",\"count\":99}}");
         assertBad("recipes.bad.field", "{\"type\":\"shapeless\",\"ingredients\":[{\"item\":\"a:b\"}],\"result\":{\"item\":\"a:b\",\"meta\":\"x\"}}");
+        assertBad("recipes.bad.field", "{\"type\":\"smelting\",\"result\":{\"item\":\"a:b\"}}");
+        assertBad("recipes.bad.field", "{\"type\":\"brewing\",\"input\":{\"item\":\"minecraft:potion\"},\"result\":{\"item\":\"a:b\"}}");
+        assertBad("recipes.bad.bottle", "{\"type\":\"brewing\",\"ingredient\":{\"item\":\"a:b\"},\"input\":{\"item\":\"minecraft:dirt\"},\"result\":{\"item\":\"a:b\"}}");
     }
 
     private static void assertBad(String key, String text) {

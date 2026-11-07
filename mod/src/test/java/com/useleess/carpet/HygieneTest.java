@@ -48,17 +48,17 @@ class HygieneTest {
         TreeSet<String> used = new TreeSet<>();
         List<Path> code = new ArrayList<>(sources(MAIN));
         code.addAll(sources(SERVER));
-        boolean categories = false;
+        TreeSet<String> builtPrefixes = new TreeSet<>();
         for (Path p : code) {
             String source = read(p);
             Matcher m = KEY.matcher(source);
             while (m.find()) used.add(m.group(1));
-            categories |= source.contains("\"category.\"");
+            for (String prefix : new String[]{"category.", "station."}) if (source.contains("\"" + prefix + "\"")) builtPrefixes.add(prefix);
         }
-        // keys built from a used one: a button's ".lore", and one name per picker category
+        // keys built from a used one: a button's ".lore", one name per picker category and per recipe type (station)
         for (String key : english.keySet()) {
             if (key.endsWith(".lore") && used.contains(key.substring(0, key.length() - ".lore".length()))) used.add(key);
-            if (categories && key.startsWith("category.")) used.add(key);
+            for (String prefix : builtPrefixes) if (key.startsWith(prefix)) used.add(key);
         }
         TreeSet<String> missing = new TreeSet<>(used);
         missing.removeAll(english.keySet());

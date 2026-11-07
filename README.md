@@ -50,7 +50,7 @@ CarpetSP's rule screen.
 | Rule | Default | What it does |
 |---|---|---|
 | `endPortalNoTeleportPlayer` | false | Players touching an end portal stay where they are; items, mobs and other entities still go through (end-portal farms keep working). |
-| `customRecipes` | true | Ops can make their own crafting recipes with `/customrecipe` (see below). Off = saved recipes do not match and the command is refused; the recipe files stay. |
+| `customRecipes` | true | Ops can make their own crafting, furnace and brewing stand recipes with `/customrecipe` (see below). Off = saved recipes do not match and the command is refused; the recipe files stay. |
 | `antiNoFall` | false | The server checks for itself that a player is standing on something before it ends their fall, so no-fall cheats (a client that always says it is on the ground) still take fall damage. Honest players notice nothing. |
 | `litematicaAccuratePlacement` | false | Blocks placed by Litematica Upgraded's printer and Easy Place get the schematic's exact state (facing, half, open, a lever's switch), but never another block kind, other drops or redstone power. |
 | `litematicaShulkerRestock` | false | Litematica Upgraded's printer and Easy Place may take the items they need out of shulker boxes in the player's inventory (the server moves them; vanilla cannot). |
@@ -70,7 +70,7 @@ The choice is saved per world (`useleess-carpet/careful-break.json`) and is back
 restart. If something goes wrong the server tells the player once and carefulBreak works like in Kisde Carpet (Sneak
 needed).
 
-## Making your own crafting recipe (ops)
+## Making your own recipes (ops)
 
 Type `/customrecipe` (operators, permission level 2; survival is fine, no creative mode and no mod on your side).
 One chest window opens; your inventory is saved to a file and then used as the item picker, and given back exactly
@@ -78,7 +78,10 @@ when you leave.
 
 1. Click an item in the picker (the bottom part of the window): it is selected. Use the category button (click = next,
    right-click = previous) and the page arrows to find it, or the sign (Search) to filter by name.
-2. Click a cell of the 3x3 grid to put the selected item there (right-click empties the cell).
+2. The button left of the output (crafting table / furnace / brewing stand; click = next, right-click = previous) picks
+   the recipe type. Crafting uses the whole 3x3 grid; the furnace only the middle cell (what is smelted); the brewing
+   stand the top middle cell (the ingredient) and the bottom middle cell (the bottle: a glass bottle or a potion; the
+   potion type counts). Click a cell to put the selected item there (right-click empties the cell).
 3. Select the result item and click the output slot (click again with the same item = one more, right-click = one less).
 4. The repeater switches "any order" (shapeless) on or off. Click the emerald (Save): the recipe is saved under the
    result's name (`diamond_sword`, then `diamond_sword_2`). Save is refused with a message when the grid or result
@@ -86,8 +89,10 @@ when you leave.
 5. Book (All recipes): load a saved recipe to change it (Save then overwrites it); shift-click one, then shift-click
    again, to delete it. Bucket (Clear) empties the grid and result. Barrier (Exit) or Esc closes the editor.
 
-Recipes are saved in the world folder: `useleess-carpet/recipes/<name>.json` (shaped or shapeless, items by registry
-name + meta, the result with its NBT). Players craft them in any crafting table with a plain Minecraft client. A broken
+Recipes are saved in the world folder: `useleess-carpet/recipes/<name>.json` (shaped, shapeless, smelting or brewing;
+items by registry name + meta (+ potion type), the result with its NBT). Players use them in any crafting table,
+furnace or brewing stand (hoppers too) with a plain Minecraft client. A recipe that would clash with a vanilla one
+(for example iron ore in the furnace) is refused. A broken
 file is skipped with a note in the log and to ops; the others keep working.
 
 ## Why a launcher instead of a server jar?

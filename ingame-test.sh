@@ -661,6 +661,50 @@ ok=1; uct state UcOp && ans_has "editing=light_weighted_pressure_plate" && ans_h
 rresult recipes/title-short $ok "$ANS"
 click ALL && click LIST 1 0 QUICK_MOVE && click LIST 1 0 QUICK_MOVE; click BACK 0 0; click CLEAR
 
+# the recipe type button (#7 #8): crafting table -> furnace -> brewing stand -> crafting table; right-click goes back
+ok=1; uct state UcOp && ans_has "station=CRAFTING" && click STATION 0 0 && uct state UcOp && ans_has "station=SMELTING" && click STATION 0 0 && uct state UcOp && ans_has "station=BREWING"     && click STATION 0 0 && uct state UcOp && ans_has "station=CRAFTING" && click STATION 0 1 && uct state UcOp && ans_has "station=BREWING" && ok=0
+rresult recipes/station-button-cycle $ok "$ANS"
+click STATION 0 0
+# the furnace uses only the middle cell: crafting items elsewhere go, a click on another cell puts nothing there
+uct pick UcOp minecraft:stick && click GRID 0 0 && click GRID 4 0 && click STATION 0 0
+ok=1; uct state UcOp && ans_has "station=SMELTING" && ans_has "grid=-,-,-,-,minecraft:stick/0x1,-,-,-,-" && click GRID 0 0 && uct state UcOp && ans_has "grid=-,-,-,-,minecraft:stick/0x1,-,-,-,-" && ok=0
+rresult recipes/station-cells $ok "$ANS"
+
+# a furnace recipe: dirt -> 3 gold nuggets, saved as a smelting file; a real furnace (any player) smelts it
+click CLEAR; uct pick UcOp minecraft:dirt && click GRID 4 0; uct pick UcOp minecraft:gold_nugget && click OUTPUT 0 0 && click OUTPUT 0 0 && click OUTPUT 0 0 && click SAVE
+ok=1; uct state UcOp && ans_has "editing=gold_nugget" && grep -q '"type": "smelting"' "$RECIPES/gold_nugget.json" && ok=0
+rresult recipes/furnace-save $ok "$ANS; file: $(tr -d '\n ' < $RECIPES/gold_nugget.json 2>/dev/null)"
+ok=1; uct smelt UcCraft minecraft:dirt && ans_has "takes=true result=minecraft:gold_nugget/0x3" && ok=0
+rresult recipes/furnace-smelts $ok "$ANS"
+ok=1; STEP="iron ore"; uct smelt UcCraft minecraft:iron_ore && ans_has "takes=true result=minecraft:iron_ingot/0x1" && STEP="diamond not taken" && uct smelt UcCraft minecraft:diamond && ans_has "takes=false result=-" && ok=0
+rresult recipes/furnace-vanilla-kept $ok "stopped at: $STEP; last answer: $ANS"
+click CLEAR; uct pick UcOp minecraft:iron_ore && click GRID 4 0; uct pick UcOp minecraft:diamond && click OUTPUT 0 0 && click SAVE
+ok=1; uct state UcOp && ans_has "title=\[Recipe already exists\]" && [ ! -f "$RECIPES/diamond.json" ] && ok=0
+rresult recipes/furnace-vanilla-refused $ok "$ANS"
+
+# a brewing recipe: the bottom cell takes only bottles and potions; diamond on a water bottle -> a bottle o' enchanting
+click CLEAR; click STATION 0 0; uct pick UcOp minecraft:diamond && click GRID 7 0
+ok=1; uct state UcOp && ans_has "station=BREWING" && ans_has "title=\[Only bottles or potions here\]" && ans_has "grid=-,-,-,-,-,-,-,-,- " && ok=0
+rresult recipes/brewing-bottle-only $ok "$ANS"
+click GRID 1 0; uct pick UcOp minecraft:potion@minecraft:water && click GRID 7 0; uct pick UcOp minecraft:experience_bottle && click OUTPUT 0 0 && click SAVE
+ok=1; uct state UcOp && ans_has "editing=experience_bottle" && ans_has "grid=-,minecraft:diamond/0x1,-,-,-,-,-,minecraft:potion/0x1~minecraft:water,-"     && grep -q '"type": "brewing"' "$RECIPES/experience_bottle.json" && grep -q '"potion": "minecraft:water"' "$RECIPES/experience_bottle.json" && ok=0
+rresult recipes/brewing-save $ok "$ANS; file: $(tr -d '\n ' < $RECIPES/experience_bottle.json 2>/dev/null)"
+ok=1; uct brew UcCraft minecraft:diamond minecraft:potion@minecraft:water && ans_has "takes=true result=minecraft:experience_bottle/0x1 ingredient_left=-" && ok=0
+rresult recipes/brewing-brews $ok "$ANS"
+ok=1; uct brew UcCraft minecraft:diamond minecraft:potion@minecraft:awkward && ans_has "result=minecraft:potion/0x1~minecraft:awkward ingredient_left=minecraft:diamond/0x1" && ok=0
+rresult recipes/brewing-potion-type $ok "$ANS"
+ok=1; STEP="nether wart"; uct brew UcCraft minecraft:nether_wart minecraft:potion@minecraft:water && ans_has "takes=true result=minecraft:potion/0x1~minecraft:awkward"     && STEP="dirt not taken" && uct brew UcCraft minecraft:dirt minecraft:potion@minecraft:water && ans_has "takes=false result=minecraft:potion/0x1~minecraft:water" && ok=0
+rresult recipes/brewing-vanilla-kept $ok "stopped at: $STEP; last answer: $ANS"
+click CLEAR; uct pick UcOp minecraft:nether_wart && click GRID 1 0; uct pick UcOp minecraft:potion@minecraft:water && click GRID 7 0; uct pick UcOp minecraft:emerald && click OUTPUT 0 0 && click SAVE
+ok=1; uct state UcOp && ans_has "title=\[Recipe already exists\]" && [ ! -f "$RECIPES/emerald.json" ] && ok=0
+rresult recipes/brewing-vanilla-refused $ok "$ANS"
+
+# loading a furnace recipe from All recipes switches the type (the list: diamond_sword, experience_bottle, gold_nugget)
+click CLEAR; click STATION 0 0
+ok=1; click ALL && click LIST 2 0 && uct state UcOp && ans_has "editing=gold_nugget" && ans_has "station=SMELTING" && ans_has "grid=-,-,-,-,minecraft:dirt/0x1,-,-,-,-" && ok=0
+rresult recipes/station-load $ok "$ANS"
+click CLEAR; click STATION 0 1
+
 # exit: the inventory is exactly as before, the vault file gone
 click EXIT 0 0
 ok=1; uct state UcOp && ans_has "state none" && uct inv UcOp && [ "${ANS#*UCT inv }" = "$INV_BEFORE" ] && [ -z "$(ls $VAULT 2>/dev/null)" ] && ok=0
@@ -708,6 +752,10 @@ ask "carpet customRecipes false" "customRecipes"
 ok=1; STEP="no craft result"; uct craft UcCraft $craft_sword && ans_has "result=-" && STEP="command refused" && uct cmd UcOp customrecipe && ans_has "result=1" \
     && STEP="no editor" && uct state UcOp && ans_has "state none" && STEP="file kept" && [ -f "$RECIPES/diamond_sword.json" ] && ok=0
 rresult recipes/rule-off $ok "stopped at: $STEP; last answer: $ANS"
+ok=1; uct smelt UcCraft minecraft:dirt && ans_has "takes=false result=-" && ok=0
+rresult recipes/furnace-rule-off $ok "$ANS"
+ok=1; uct brew UcCraft minecraft:diamond minecraft:potion@minecraft:water && ans_has "takes=false result=minecraft:potion/0x1~minecraft:water" && ok=0
+rresult recipes/brewing-rule-off $ok "$ANS"
 ask "carpet customRecipes true" "customRecipes"
 ok=1; uct craft UcCraft $craft_sword && ans_has "took=minecraft:diamond/0x2" && ok=0
 rresult recipes/rule-on-again $ok "last answer: $ANS"
@@ -719,6 +767,10 @@ printf '{}' > "$RECIPES/Bad Name.json"
 ok=1; STEP="restart"; rules_server && STEP="players join" && spawn_player UcCraft 10.5 && spawn_player UcOp 2.5 \
     && STEP="bad files named in the log" && has server.log "broken.json" && has server.log "Bad Name.json" && STEP="craft" && uct craft UcCraft $craft_sword && ans_has "took=minecraft:diamond/0x2" && ok=0
 rresult recipes/survives-restart $ok "stopped at: $STEP; last answer: $ANS"
+ok=1; uct smelt UcCraft minecraft:dirt && ans_has "result=minecraft:gold_nugget/0x3" && ok=0
+rresult recipes/furnace-survives-restart $ok "$ANS"
+ok=1; uct brew UcCraft minecraft:diamond minecraft:potion@minecraft:water && ans_has "result=minecraft:experience_bottle/0x1" && ok=0
+rresult recipes/brewing-survives-restart $ok "$ANS"
 ok=1; has server.log "Recipe file broken.json was skipped" && has server.log "Recipe file Bad Name.json was skipped" && ok=0
 rresult recipes/bad-file-skipped $ok "$(grep -i 'skipped' server.log | head -n 3 | tr '\n' ' ')"
 rules_end

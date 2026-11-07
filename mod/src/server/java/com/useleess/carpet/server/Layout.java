@@ -5,12 +5,12 @@ package com.useleess.carpet.server;
  * slots 27..62 and show the item picker). Clicks and tests speak in {@link Role}s, never in fixed numbers.
  */
 final class Layout {
-    enum Role { GRID, ARROW, OUTPUT, SAVE, CLEAR, ORDER, ALL, SEARCH, EXIT, CATEGORY, PREV, NEXT, PICKER, LIST, BACK, NONE }
+    enum Role { GRID, STATION, OUTPUT, SAVE, CLEAR, ORDER, ALL, SEARCH, EXIT, CATEGORY, PREV, NEXT, PICKER, LIST, BACK, NONE }
 
     static final int MENU = 27;
     static final int PICKER = 36;
     static final int LIST_PAGE = 18;
-    private static final int ARROW = 12, OUTPUT = 13, SAVE = 6, CLEAR = 7, ORDER = 8, ALL = 15, SEARCH = 16, EXIT = 17,
+    private static final int STATION = 12, OUTPUT = 13, SAVE = 6, CLEAR = 7, ORDER = 8, ALL = 15, SEARCH = 16, EXIT = 17,
             CATEGORY = 24, PREV = 25, NEXT = 26, BACK = 8;
 
     private Layout() {}
@@ -19,7 +19,7 @@ final class Layout {
     static int slot(Role role, int n) {
         switch (role) {
             case GRID: return n / 3 * 9 + n % 3;
-            case ARROW: return ARROW;
+            case STATION: return STATION;
             case OUTPUT: return OUTPUT;
             case SAVE: return SAVE;
             case CLEAR: return CLEAR;
@@ -43,7 +43,7 @@ final class Layout {
         if (slot < 0 || slot >= MENU) return Role.NONE;
         if (slot % 9 < 3) return Role.GRID;
         switch (slot) {
-            case ARROW: return Role.ARROW;
+            case STATION: return Role.STATION;
             case OUTPUT: return Role.OUTPUT;
             case SAVE: return Role.SAVE;
             case CLEAR: return Role.CLEAR;
