@@ -26,7 +26,7 @@ public final class CarefulBreak {
     static final String ALWAYS = "always";
     static final String SNEAK = "sneak";
 
-    private static CarefulStore store;
+    private static ChoiceStore store;
     private static boolean saveBroken;
     private static boolean wantsBroken;
     private static final Map<UUID, String> KNOWN = new HashMap<>();
@@ -37,9 +37,9 @@ public final class CarefulBreak {
     /** Opens the saved choices; a damaged file is told to the ops and nothing is restored. */
     static void open(File file) {
         try {
-            store = CarefulStore.open(file);
+            store = ChoiceStore.open(file);
         } catch (IOException | RuntimeException e) {
-            store = new CarefulStore(file);
+            store = new ChoiceStore(file);
             Guard.LOG.error(ServerText.get("log.careful_load_failed", file), e);
             Guard.notice(ServerText.get("careful.load_failed"));
         }

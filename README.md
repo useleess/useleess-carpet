@@ -70,6 +70,17 @@ The choice is saved per world (`useleess-carpet/careful-break.json`) and is back
 restart. If something goes wrong the server tells the player once and carefulBreak works like in Kisde Carpet (Sneak
 needed).
 
+## Bots that sleep by themselves
+
+A Carpet bot (made with `/player <name> spawn`) can go to bed by itself every night, so a server where only bots are
+online still skips the night:
+
+1. Put a bed next to the bot (within 3 blocks across and 2 up or down; Minecraft's own reach).
+2. `/autosleep <bot> on` (anyone may use it; `/autosleep <bot> off` turns it off, `/autosleep <bot>` tells the state).
+
+At night the bot lies down in the nearest free bed; Minecraft wakes it in the morning as usual. Like a player it can't
+sleep with monsters close by, or in the Nether or the End. The choice is kept per world, also over a server restart.
+
 ## Making your own recipes (ops)
 
 Type `/customrecipe` (operators, permission level 2; survival is fine, no creative mode and no mod on your side).

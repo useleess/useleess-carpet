@@ -99,7 +99,11 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
   `Vault` (saves + empties the real inventory first, restores on exit / close / leave / death / stop / off-switch / next join).
 - Careful break: `CarefulBreak` (`wants`; reads `LoggerRegistry.getPlayerSubscriptions`, the player's option; saves a
   changed choice from `Hooks.tick` / join / leave, puts a saved one back on join; every failure = Sneak needed, logged +
-  told once) and `CarefulStore` (game-free: `<world>/useleess-carpet/careful-break.json`, UUID to option).
+  told once) and `ChoiceStore` (game-free: one saved word per player UUID, here `<world>/useleess-carpet/careful-break.json`).
+- Bot sleep (#11): `BotSleepCommand` (`/autosleep <bot> [on|off]`, anyone, Carpet bots only) + `BotSleep` (from
+  `Hooks.tick` once a second: a bot with it on that is awake at night lies down in the nearest free bed within
+  Minecraft's reach via `trySleep`; saved in `ChoiceStore` `<world>/useleess-carpet/bot-sleep.json`; a failure = off for
+  every bot, logged + told to ops).
 - `SelfTest`: `/uct`, registered only with `-Duseleess.carpet.selftest=1`; the in-game tests drive editors with it by slot role.
 - `ScopeSwitch`: rule `redstoneScopeLogger` (plain rule, read by name) -> `com.redstonescope.RecordingSwitch.setOn`, synced
   from `Hooks.tick` only on a change; a missing class/method is logged once + told to ops, nothing else breaks.
@@ -148,5 +152,6 @@ with its default, the hook at the method's start, a missing target fails the bui
   `rules/nofall-*`: `/uct fall` replays a 10-block fall through the real `handleFalling` (cheat / honest).
   `recipes/`: the custom-recipe editor on its own server with `/uct` (survival op fake players, clicks by slot role).
   `rules/`: our rules on their own server (listed with its default, a Carpet fake player in an end portal stays /
-  goes, items still go, `carpet setDefault` kept over a restart). `carefulbreak/`: a Carpet fake player mining dirt, drop in the
+  goes, items still go, `carpet setDefault` kept over a restart). `botsleep/`: a Carpet bot, the only player, with a
+  bed in reach skips the night with /autosleep on, not with off / no bed, kept over a restart. `carefulbreak/`: a Carpet fake player mining dirt, drop in the
   inventory or on the ground per option / rule, the choice kept over a restart. `FILTER=` skips the parts it does not need.

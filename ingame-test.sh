@@ -83,7 +83,7 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 56"
+echo "SCOPE-TEST total 61"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -509,6 +509,82 @@ else
         [ -z "$why" ] && { got="$(cb_mine)"; [ "$got" = inventory ] && ok=0; why="after the restart the drop went to '$got', expected 'inventory'"; }
     else why="the server did not start again"; fi
     result carefulbreak/remembered $ok "$why (saved file: $saved)"
+fi
+rules_end
+fi
+
+# bots that sleep by themselves (#11, /autosleep): the bot UcSleep is the only player, so the night is skipped exactly
+# when it lies in bed
+if section botsleep/; then
+S="$BASE/botsleep"; mkdir -p "$S"; cd "$S" || exit 2
+cp "$A/$SERVER_JAR" .
+echo "eula=true" > eula.txt
+printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=4\nsnooper-enabled=false\nspawn-monsters=false\n' "$((PORT + 3))" > server.properties
+BS_NOTFOUND="found nothing|cannot be found|No entity|not found|did not match|rror"
+# bs_join: UcSleep joins and stands at 2.5 4 2.5 in creative (it appears at 0 0 0 in the bedrock: a bot that suffocates
+# there comes back as a plain player, no longer a Carpet bot); prints why not (empty = ok)
+bs_join() {
+    say "player UcSleep spawn"
+    wait_for server.log "UcSleep joined" 60 || { echo "UcSleep did not join within 60 s: $(tail -n 4 server.log | tr '\n' ' ')"; return; }
+    say "gamemode creative UcSleep"; say "tp UcSleep 2.5 4 2.5 0 0"
+    until_ok 15 "testfor @a[name=UcSleep,x=2,y=4,z=2,dx=0,dy=0,dz=0]" "Found UcSleep" "$BS_NOTFOUND" || echo "UcSleep was never seen at its spot"
+}
+# bs_bed / bs_nobed: a bed 2 blocks east of the bot (foot 4 4 2, head 4 4 3) / none
+bs_bed() { say "setblock 4 4 3 minecraft:bed 8"; say "setblock 4 4 2 minecraft:bed 0"; sleep 1; }
+bs_nobed() { say "setblock 4 4 2 minecraft:air"; say "setblock 4 4 3 minecraft:air"; sleep 1; }
+# bs_night <seconds>: sets midnight and prints "skipped" when the night is skipped within the time, else "night"
+bs_night() {
+    say "time set 18000"; sleep 1
+    end=$(($(date +%s) + $1))
+    while [ "$(date +%s)" -lt "$end" ]; do
+        before=$(wc -l < server.log); say "time query daytime"; sleep 1
+        t="$(tail -n +"$((before + 1))" server.log | sed -n 's/.*Time is \([0-9]*\).*/\1/p' | head -n 1)"
+        [ -n "$t" ] && [ "$t" -lt 12000 ] && { echo skipped; return; }
+    done
+    echo night
+}
+
+rules_server
+why="$(bs_join)"
+if [ -n "$why" ]; then
+    for t in not-bot sleeps off no-bed remembered; do result botsleep/$t 1 "$why"; done
+else
+    # 1. a real player name that is no bot is refused
+    ask "autosleep Nobody on" "is not a Carpet bot" "$BS_NOTFOUND|now goes to bed"; ok=$?
+    result botsleep/not-bot $ok "answer $ok: $(tail -n 2 server.log | tr '\n' ' ')"
+    # 2. on + a bed in reach: the bot goes to bed by itself and the night is skipped
+    bs_bed
+    ask "autosleep UcSleep on" "UcSleep now goes to bed by itself" "rror|not a Carpet bot"; ok=$?
+    got=""; [ $ok = 0 ] && got="$(bs_night 40)"
+    ok=1; [ "$got" = skipped ] && ok=0
+    result botsleep/sleeps $ok "autosleep on, bed 2 blocks away, midnight: '$got' after 40 s ($(tail -n 3 server.log | tr '\n' ' '))"
+    # 3. off: the bot stays up, the night goes on
+    ask "autosleep UcSleep off" "no longer goes to bed" "rror" >/dev/null
+    got="$(bs_night 15)"
+    ok=1; [ "$got" = night ] && ok=0
+    result botsleep/off $ok "autosleep off: the night was '$got' (expected night)"
+    # 4. on without a bed in reach: told so, and the night goes on
+    bs_nobed
+    ask "autosleep UcSleep on" "no free bed within 3 blocks of UcSleep" "rror"; told=$?
+    got="$(bs_night 15)"
+    ok=1; [ $told = 0 ] && [ "$got" = night ] && ok=0
+    result botsleep/no-bed $ok "no bed: told=$told (0 = yes), the night was '$got' (expected night)"
+    # 5. remembered over a restart: the same bot sleeps again without being told
+    n=0; while [ $n -lt 10 ] && ! grep -q '"on"' world/useleess-carpet/bot-sleep.json 2>/dev/null; do sleep 1; n=$((n + 1)); done
+    saved="$(cat world/useleess-carpet/bot-sleep.json 2>/dev/null)"
+    rules_stop
+    ok=1
+    if rules_server; then
+        why="$(bs_join)"
+        if [ -z "$why" ]; then
+            bs_bed
+            night="$(bs_night 40)"; [ "$night" = skipped ] && ok=0
+            ask "autosleep UcSleep" "UcSleep (goes|does not go) to bed" "rror" >/dev/null
+            why="after the restart the night was '$night' (expected skipped); state: $(grep -E "to bed|bot sleep|Bots sleeping|Exception|UcSleep" server.log | tail -n 6 | tr '
+' ' ')"
+        fi
+    else why="the server did not start again"; fi
+    result botsleep/remembered $ok "$why (saved file: $saved)"
 fi
 rules_end
 fi

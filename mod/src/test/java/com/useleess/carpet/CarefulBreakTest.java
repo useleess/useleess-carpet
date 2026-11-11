@@ -1,6 +1,6 @@
 package com.useleess.carpet;
 
-import com.useleess.carpet.server.CarefulStore;
+import com.useleess.carpet.server.ChoiceStore;
 import com.useleess.carpet.tools.CarefulBreakPatch;
 import com.useleess.carpet.tools.RulesMaker;
 import org.junit.jupiter.api.Test;
@@ -130,15 +130,15 @@ class CarefulBreakTest {
     @Test void theSavedChoicesSurviveARestart(@TempDir Path dir) throws IOException {
         File file = new File(dir.toFile(), "useleess-carpet/careful-break.json");
         UUID a = UUID.randomUUID(), b = UUID.randomUUID();
-        CarefulStore store = CarefulStore.open(file);
+        ChoiceStore store = ChoiceStore.open(file);
         assertNull(store.get(a));
         store.set(a, "always");
         store.set(b, "sneak");
-        CarefulStore again = CarefulStore.open(file);
+        ChoiceStore again = ChoiceStore.open(file);
         assertEquals("always", again.get(a));
         assertEquals("sneak", again.get(b));
         again.set(a, null);
-        CarefulStore third = CarefulStore.open(file);
+        ChoiceStore third = ChoiceStore.open(file);
         assertNull(third.get(a));
         assertEquals("sneak", third.get(b));
         assertFalse(new File(file.getParentFile(), "careful-break.json.tmp").exists());
@@ -147,10 +147,10 @@ class CarefulBreakTest {
     @Test void aDamagedFileIsRefusedNotCrashed(@TempDir Path dir) throws IOException {
         File file = new File(dir.toFile(), "careful-break.json");
         Files.write(file.toPath(), "{not json".getBytes(StandardCharsets.UTF_8));
-        assertThrows(IOException.class, () -> CarefulStore.open(file));
+        assertThrows(IOException.class, () -> ChoiceStore.open(file));
         Files.write(file.toPath(), "{\"not-a-uuid\": \"always\"}".getBytes(StandardCharsets.UTF_8));
-        assertThrows(IOException.class, () -> CarefulStore.open(file));
+        assertThrows(IOException.class, () -> ChoiceStore.open(file));
         Files.write(file.toPath(), "[1,2]".getBytes(StandardCharsets.UTF_8));
-        assertThrows(IOException.class, () -> CarefulStore.open(file));
+        assertThrows(IOException.class, () -> ChoiceStore.open(file));
     }
 }

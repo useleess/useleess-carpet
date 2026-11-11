@@ -14,18 +14,18 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-/** The saved careful-break choice of each player ({@code careful-break.json}: UUID to "sneak" or "always"); game-free. */
-public final class CarefulStore {
+/** One saved choice per player in a world file (UUID to a word: careful break "sneak" / "always", bot sleep "on"); game-free. */
+public final class ChoiceStore {
     private final File file;
     private final Map<UUID, String> options = new TreeMap<>();
 
-    public CarefulStore(File file) {
+    public ChoiceStore(File file) {
         this.file = file;
     }
 
     /** Reads the file; a missing file is an empty store, a damaged one throws. */
-    public static CarefulStore open(File file) throws IOException {
-        CarefulStore store = new CarefulStore(file);
+    public static ChoiceStore open(File file) throws IOException {
+        ChoiceStore store = new ChoiceStore(file);
         if (!file.isFile()) return store;
         try {
             JsonObject root = new JsonParser().parse(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)).getAsJsonObject();

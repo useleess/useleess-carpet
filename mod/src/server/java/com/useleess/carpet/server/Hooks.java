@@ -15,7 +15,7 @@ import java.util.Queue;
 
 /**
  * The few places Minecraft and Carpet call into us (patched in by the build, see tools/ServerLayer): server loaded,
- * every tick, player joined / left / dying, server stopping, a player's "on the ground", a
+ * every tick (bots going to bed at night), player joined / left / dying, server stopping, a player's "on the ground", a
  * mod's message from a client, a click on a block, the furnace's and the brewing stand's recipe lookups. Each one is guarded: a failure
  * switches the feature off.
  */
@@ -37,6 +37,7 @@ public final class Hooks {
             CustomRecipes.register();
             CommandHandler commands = (CommandHandler) server.getCommandManager();
             commands.registerCommand(new CustomRecipeCommand());
+            commands.registerCommand(new BotSleepCommand());
             if (SelfTest.enabled()) commands.registerCommand(new SelfTest());
         });
     }
@@ -48,6 +49,7 @@ public final class Hooks {
         Vault.dir = new File(root, "editor");
         RecipeStore.current = RecipeStore.open(new File(root, "recipes"));
         CarefulBreak.open(new File(root, "careful-break.json"));
+        BotSleep.open(new File(root, "bot-sleep.json"));
     }
 
     /**
@@ -62,6 +64,7 @@ public final class Hooks {
         Guard.run("start", () -> worldsLoaded(server));
         ScopeSwitch.sync();
         CarefulBreak.tick(server);
+        BotSleep.tick(server);
         LuServer.tick(server);
         for (int n = NEXT_TICK.size(); n > 0; n--) Guard.run("tick", NEXT_TICK.poll());
     }

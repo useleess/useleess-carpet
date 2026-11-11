@@ -45,6 +45,11 @@
    "prefix": "recipes/station-",
    "min": 3,
    "what": "recipe type button (#7 #8): cycles both ways, each type uses only its own cells, loading a recipe switches to its type"
+  },
+  {
+   "prefix": "botsleep/",
+   "min": 5,
+   "what": "bots that sleep by themselves (#11, /autosleep <bot> on|off): a non-bot refused, on + a bed in reach = the bot goes to bed and the night is skipped, off = stays up, no bed in reach = told + stays up, the choice is remembered over a server restart"
   }
  ]
 }
