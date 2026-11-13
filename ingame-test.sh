@@ -83,7 +83,7 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 61"
+echo "SCOPE-TEST total 62"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -754,6 +754,9 @@ ok=1; uct smelt UcCraft minecraft:dirt && ans_has "takes=true result=minecraft:g
 rresult recipes/furnace-smelts $ok "$ANS"
 ok=1; STEP="iron ore"; uct smelt UcCraft minecraft:iron_ore && ans_has "takes=true result=minecraft:iron_ingot/0x1" && STEP="diamond not taken" && uct smelt UcCraft minecraft:diamond && ans_has "takes=false result=-" && ok=0
 rresult recipes/furnace-vanilla-kept $ok "stopped at: $STEP; last answer: $ANS"
+# #12: a recipe unlocked for a player with no connection (a player's server crashed there) is skipped, not a crash
+ok=1; uct recipebook UcCraft minecraft:golden_hoe && ans_has "unlocked=true" && ok=0
+rresult recipes/recipebook-no-connection $ok "answer: $ANS"
 click CLEAR; uct pick UcOp minecraft:iron_ore && click GRID 4 0; uct pick UcOp minecraft:diamond && click OUTPUT 0 0 && click SAVE
 ok=1; uct state UcOp && ans_has "title=\[Recipe already exists\]" && [ ! -f "$RECIPES/diamond.json" ] && ok=0
 rresult recipes/furnace-vanilla-refused $ok "$ANS"

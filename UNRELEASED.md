@@ -9,3 +9,6 @@ Collected here until the next release, then used as the GitHub / Modrinth notes.
 - The item picker now lists every potion type (before: one potion of each kind).
 - Carpet bots can sleep through the night by themselves (#11): `/autosleep <bot> on` and the bot goes to bed every
   night in a free bed within 3 blocks, so a server with only bots online still skips the night. Kept over a restart.
+- Fixed a server crash (#12): when a recipe got unlocked for a player whose connection was already gone, the server
+  crashed ("Ticking player", RecipeBookServer). Now that message is skipped; the recipe stays unlocked and shows up at
+  the player's next join. The server log names the player and where it came from.

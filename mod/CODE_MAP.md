@@ -119,7 +119,9 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
   `processTryUseItemOnBlock` read the spots with a waiting request (`PendingIntents`, game-free) before and after a click;
   a changed block = placed by it, it gets the asked state. Keep `LuProtocol`'s property list matched with LU's own.
 - Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.
-  `answer(...)` = a hook whose answer (non-null object / true) the patched method returns at once (it adds the jump's frame).
+  `answer(...)` = a hook whose answer (non-null object / true) the patched method returns at once (it adds the jump's frame); a void method returns on true).
+- Crash guard (#12): `Hooks.noConnection` answers at the start of `RecipeBookServer.sendPacket`: a player without a
+  connection gets no recipe-book message (logged once with the stack) instead of a server crash.
 
 ## Per-version layer
 

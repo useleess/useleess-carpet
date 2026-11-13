@@ -107,6 +107,9 @@ final class ServerLayer {
         answer(jar, names, POTION_HELPER, "func_185205_a", "(" + stack + ")Z", "brewIngredient", "(" + stack + ")Z", 0);
         answer(jar, names, POTION_HELPER, "func_185208_a", twoStacks + "Z", "brews", twoStacks + "Z", 0, 1);
         answer(jar, names, POTION_HELPER, "func_185212_d", twoStacks + stack, "brewResult", twoStacks + stack, 0, 1);
+        // RecipeBookServer.sendPacket (#12): a player without a connection gets no recipe-book message instead of a crash
+        answer(jar, names, "net/minecraft/stats/RecipeBookServer", "func_194081_a",
+                "(Lnet/minecraft/network/play/server/SPacketRecipeBook$State;L" + PLAYER + ";Ljava/util/List;)V", "noConnection", "(L" + PLAYER + ";)Z", 2);
         TreeSet<String> broken = new LinkCheck(jar).check(touched);
         if (!broken.isEmpty()) {
             throw new IllegalStateException("links that would break on the server:\n  " + String.join("\n  ", broken));
@@ -156,7 +159,7 @@ final class ServerLayer {
 
     /**
      * At a method's start: {@code Hooks.<hook>(locals...)}; its answer (an object that is not null, or true) is
-     * returned at once, else the method runs as before. The jump gets its stack map frame here (nothing else changes).
+     * returned at once (a void method: true = return at once), else the method runs as before. The jump gets its stack map frame here (nothing else changes).
      */
     private static void answer(Map<String, byte[]> jar, NameBridge names, String owner, String method, String desc, String hook, String hookDesc, int... locals) {
         patch(jar, names, owner, method, desc, target -> {
@@ -165,8 +168,12 @@ final class ServerLayer {
             Type answer = Type.getReturnType(hookDesc);
             if (answer.getSort() == Type.BOOLEAN) {
                 list.add(new JumpInsnNode(Opcodes.IFEQ, own));
-                list.add(new InsnNode(Opcodes.ICONST_1));
-                list.add(new InsnNode(Opcodes.IRETURN));
+                if (Type.getReturnType(desc) == Type.VOID_TYPE) {
+                    list.add(new InsnNode(Opcodes.RETURN));
+                } else {
+                    list.add(new InsnNode(Opcodes.ICONST_1));
+                    list.add(new InsnNode(Opcodes.IRETURN));
+                }
                 list.add(own);
                 list.add(new FrameNode(Opcodes.F_SAME, 0, null, 0, null));
                 list.add(new InsnNode(Opcodes.NOP));

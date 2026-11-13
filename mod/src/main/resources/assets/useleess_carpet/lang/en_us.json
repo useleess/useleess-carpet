@@ -152,5 +152,6 @@
   "botsleep.load_failed": "The saved bot sleep choices could not be read, so no bot sleeps by itself until it is turned on again. See the server log.",
   "log.botsleep_failed": "Bots sleeping by themselves failed and is switched off until the server restarts.",
   "log.botsleep_load_failed": "The bot sleep choices in %s could not be read; they are not restored.",
-  "log.botsleep_save_failed": "The bot sleep choice for %s could not be saved."
+  "log.botsleep_save_failed": "The bot sleep choice for %s could not be saved.",
+  "log.recipebook_no_connection": "%s has no connection, so a newly unlocked recipe was not sent to the game (it reaches the game at the next join). Where it came from:"
 }

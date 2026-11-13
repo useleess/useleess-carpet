@@ -5,7 +5,9 @@ import net.minecraft.block.BlockWorkbench;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.ContainerBrewingStand;
+import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.FurnaceRecipes;
+import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.tileentity.TileEntityBrewingStand;
 import net.minecraft.tileentity.TileEntityFurnace;
 import net.minecraft.command.CommandBase;
@@ -19,6 +21,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.Packet;
+import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.play.client.CPacketConfirmTeleport;
 import net.minecraft.network.play.client.CPacketCustomPayload;
@@ -35,6 +38,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -91,6 +95,7 @@ final class SelfTest extends CommandBase {
             case "fall": out = fall(player, Integer.parseInt(args[2]), Boolean.parseBoolean(args[3])); break;
             case "shulker": out = shulker(player, args); break;
             case "place": out = place(player, args); break;
+            case "recipebook": out = recipeBook(player, args[2]); break;
             case "caps": out = Arrays.toString(LuServer.capabilities()); break;
             default: out = "unknown action";
         }
@@ -214,6 +219,19 @@ final class SelfTest extends CommandBase {
      * What a real client answers after a teleport: a fake player never does, and the server ignores clicks until then.
      * Wrong numbers do nothing; the right one a second time would crash the handler, so once per player.
      */
+    /** #12's crash state: a recipe unlocked for the player while it has no connection; prints whether it is unlocked. */
+    private static String recipeBook(EntityPlayerMP player, String recipe) {
+        IRecipe r = CraftingManager.getRecipe(new ResourceLocation(recipe));
+        NetHandlerPlayServer connection = player.connection;
+        player.connection = null;
+        try {
+            player.unlockRecipes(Collections.singletonList(r));
+        } finally {
+            player.connection = connection;
+        }
+        return "unlocked=" + player.getRecipeBook().isUnlocked(r);
+    }
+
     private static void confirmTeleports(EntityPlayerMP player) {
         if (!TELEPORT_CONFIRMED.add(player.getUniqueID())) return;
         for (int id = 0; id < 4096; id++) {

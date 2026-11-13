@@ -11,16 +11,20 @@ import net.minecraft.util.math.AxisAlignedBB;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.HashSet;
 import java.util.Queue;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * The few places Minecraft and Carpet call into us (patched in by the build, see tools/ServerLayer): server loaded,
  * every tick (bots going to bed at night), player joined / left / dying, server stopping, a player's "on the ground", a
- * mod's message from a client, a click on a block, the furnace's and the brewing stand's recipe lookups. Each one is guarded: a failure
+ * mod's message from a client, a click on a block, the furnace's and the brewing stand's recipe lookups, a recipe-book message. Each one is guarded: a failure
  * switches the feature off.
  */
 public final class Hooks {
     private static final Queue<Runnable> NEXT_TICK = new ArrayDeque<>();
+    private static final Set<UUID> NO_CONNECTION_TOLD = new HashSet<>();
     private static final FallCheck FALL = new FallCheck(Rule.named(FallCheck.RULE), e -> {
         Guard.LOG.error(ServerText.get("log.fall_check_failed"), e);
         Guard.notice(ServerText.get("fall.check_failed", String.valueOf(e)));
@@ -135,6 +139,17 @@ public final class Hooks {
     /** PotionHelper.doReaction, at its start: a saved brewing recipe's result for the bottle, null = Minecraft's own. */
     public static ItemStack brewResult(ItemStack ingredient, ItemStack bottle) {
         return StationRecipes.brewResult(ingredient, bottle);
+    }
+
+    /**
+     * RecipeBookServer.sendPacket, at its start (#12): true = the player has no connection (a crash on a player's server:
+     * a recipe advancement fired for such a player), so the message is skipped; the recipe stays unlocked and reaches
+     * the game with the whole book at the next join. Logged once per player with where it came from.
+     */
+    public static boolean noConnection(EntityPlayerMP player) {
+        if (player.connection != null) return false;
+        if (NO_CONNECTION_TOLD.add(player.getUniqueID())) Guard.LOG.warn(ServerText.get("log.recipebook_no_connection", player.getName()), new IllegalStateException());
+        return true;
     }
 
     /** Before the death drops: the real items are back, so the game rules decide what is dropped. */

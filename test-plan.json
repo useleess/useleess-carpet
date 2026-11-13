@@ -50,6 +50,11 @@
    "prefix": "botsleep/",
    "min": 5,
    "what": "bots that sleep by themselves (#11, /autosleep <bot> on|off): a non-bot refused, on + a bed in reach = the bot goes to bed and the night is skipped, off = stays up, no bed in reach = told + stays up, the choice is remembered over a server restart"
+  },
+  {
+   "prefix": "recipes/recipebook-",
+   "min": 1,
+   "what": "#12 crash: a recipe unlocked for a player with no connection is skipped (stays unlocked), the server keeps running"
   }
  ]
 }
