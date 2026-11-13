@@ -84,11 +84,11 @@ sleep with monsters close by, or in the Nether or the End. The choice is kept pe
 ## Making your own recipes (ops)
 
 Type `/customrecipe` (operators, permission level 2; survival is fine, no creative mode and no mod on your side).
-One chest window opens; your inventory is saved to a file and then used as the item picker, and given back exactly
-when you leave.
+One big chest window opens: the items to pick from fill the top (54 per page); the grid and the buttons sit below,
+where your inventory normally is. Your inventory is saved to a file meanwhile and given back exactly when you leave.
 
-1. Click an item in the picker (the bottom part of the window): it is selected. Use the category button (click = next,
-   right-click = previous) and the page arrows to find it, or the sign (Search) to filter by name.
+1. Click an item in the picker (the top part of the window): it is selected. Use the category button (bottom row,
+   click = next, right-click = previous) and the page arrows beside it to find it, or the sign (Search) to filter by name.
 2. The button left of the output (crafting table / furnace / brewing stand; click = next, right-click = previous) picks
    the recipe type. Crafting uses the whole 3x3 grid; the furnace only the middle cell (what is smelted); the brewing
    stand the top middle cell (the ingredient) and the bottom middle cell (the bottle: a glass bottle or a potion; the

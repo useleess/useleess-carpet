@@ -8,16 +8,16 @@ import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 
 /**
- * The editor's window: the chest layout (27 menu slots, then the player's 36 inventory slots as the picker), every
+ * The editor's window: a 6-row chest layout (54 top slots, then the 36 slots where the player's inventory normally is), every
  * click handled by the {@link EditorSession}. Minecraft's own click handling never runs, so nothing can leave.
  */
 final class EditorContainer extends Container {
     private final EditorSession session;
 
-    EditorContainer(EditorSession session, IInventory menu, IInventory picker) {
+    EditorContainer(EditorSession session, IInventory top, IInventory bottom) {
         this.session = session;
-        for (int i = 0; i < Layout.MENU; i++) addSlotToContainer(new DisplaySlot(menu, i));
-        for (int i = 0; i < Layout.PICKER; i++) addSlotToContainer(new DisplaySlot(picker, i));
+        for (int i = 0; i < Layout.TOP; i++) addSlotToContainer(new DisplaySlot(top, i));
+        for (int i = 0; i < Layout.BOTTOM; i++) addSlotToContainer(new DisplaySlot(bottom, i));
     }
 
     @Override public ItemStack slotClick(int slotId, int button, ClickType type, EntityPlayer player) {

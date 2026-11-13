@@ -28,15 +28,15 @@ import java.util.List;
 
 /**
  * One op's open editor: all state (grid, result, picker category / page / search, loaded recipe) and every click.
- * The window shows this state through two fake inventories (27 menu cells, 36 picker cells), so the real inventory is
+ * The window shows this state through two fake inventories (54 chest cells on top, 36 cells below; see {@link Layout}), so the real inventory is
  * never part of it; every item shown is a copy that exists only for display.
  */
 final class EditorSession {
     enum Mode { EDITOR, LIST, SEARCH }
 
     private final EntityPlayerMP player;
-    private final InventoryBasic menu = new InventoryBasic(ServerText.get("editor.title"), true, Layout.MENU);
-    private final InventoryBasic picker = new InventoryBasic("picker", false, Layout.PICKER);
+    private final InventoryBasic top = new InventoryBasic(ServerText.get("editor.title"), true, Layout.TOP);
+    private final InventoryBasic bottom = new InventoryBasic("controls", false, Layout.BOTTOM);
     private Mode mode = Mode.EDITOR;
     private boolean switching, closed, titleIsMessage;
     private Container container;
@@ -65,15 +65,15 @@ final class EditorSession {
     ItemStack grid(int i) { return grid[i]; }
     ItemStack output() { return output; }
     ItemStack selected() { return selected; }
-    ItemStack menuStack(int slot) { return menu.getStackInSlot(slot); }
-    ItemStack pickerStack(int cell) { return picker.getStackInSlot(cell); }
+    /** What window slot {@code slot} shows. */
+    ItemStack shown(int slot) { return slot < Layout.TOP ? top.getStackInSlot(slot) : bottom.getStackInSlot(slot - Layout.TOP); }
     Category category() { return category; }
     int pickerPage() { return pickerPage; }
     String searchText() { return searchText; }
     String editing() { return editing; }
     boolean anyOrder() { return anyOrder; }
     Station station() { return station; }
-    String title() { return menu.getName(); }
+    String title() { return top.getName(); }
 
     /** Sets the search text as typing it into the anvil's rename field does. */
     void searchTyped(String name) {
@@ -96,13 +96,13 @@ final class EditorSession {
 
     /** Opens (or re-opens) the chest window with the editor in it. */
     void showEditor() {
-        menu.setCustomName(ServerText.get("editor.title"));
+        top.setCustomName(ServerText.get("editor.title"));
         titleIsMessage = false;
         mode = Mode.EDITOR;
         switching = true;
         try {
-            player.displayGUIChest(menu);
-            EditorContainer mine = new EditorContainer(this, menu, picker);
+            player.displayGUIChest(top);
+            EditorContainer mine = new EditorContainer(this, top, bottom);
             mine.windowId = player.openContainer.windowId;
             player.openContainer = mine;
             container = mine;
@@ -197,7 +197,7 @@ final class EditorSession {
         switch (Layout.editorRole(slot)) {
             case PICKER: {
                 List<Catalogue.Entry> list = Catalogue.filter(category, searchText);
-                int at = pickerPage * Layout.PICKER + Layout.pickerIndex(slot);
+                int at = pickerPage * Layout.PICKER + slot;
                 selected = button == 0 && at < list.size() ? list.get(at).stack.copy() : ItemStack.EMPTY;
                 break;
             }
@@ -288,7 +288,7 @@ final class EditorSession {
         switch (Layout.listRole(slot)) {
             case LIST: {
                 List<String> names = new ArrayList<>(store.names());
-                int at = listPage * Layout.LIST_PAGE + Layout.listIndex(slot);
+                int at = listPage * Layout.LIST_PAGE + slot;
                 if (at >= names.size()) break;
                 String name = names.get(at);
                 if (!delete) {
@@ -409,25 +409,25 @@ final class EditorSession {
 
     private void setTitleText(String text) {
         titleIsMessage = false;
-        menu.setCustomName(text);
+        top.setCustomName(text);
         if (container instanceof EditorContainer) {
-            player.connection.sendPacket(new SPacketOpenWindow(container.windowId, "minecraft:container", menu.getDisplayName(), Layout.MENU));
+            player.connection.sendPacket(new SPacketOpenWindow(container.windowId, "minecraft:container", top.getDisplayName(), Layout.TOP));
         }
     }
 
     private void render() {
-        menu.clear();
-        picker.clear();
+        top.clear();
+        bottom.clear();
         if (mode == Mode.LIST) renderList();
         else renderEditor();
     }
 
     private void renderEditor() {
         for (int i = 0; i < 9; i++) {
-            menu.setInventorySlotContents(Layout.slot(Layout.Role.GRID, i), station.uses(i) ? grid[i].copy() : named(new ItemStack(Blocks.STAINED_GLASS_PANE, 1, 7), " "));
+            put(Layout.slot(Layout.Role.GRID, i), station.uses(i) ? grid[i].copy() : named(new ItemStack(Blocks.STAINED_GLASS_PANE, 1, 7), " "));
         }
         button(Layout.Role.STATION, stationIcon(), "editor.button.station", ServerText.get("station." + station.key));
-        menu.setInventorySlotContents(Layout.slot(Layout.Role.OUTPUT, 0), output.copy());
+        put(Layout.slot(Layout.Role.OUTPUT, 0), output.copy());
         button(Layout.Role.SAVE, Items.EMERALD, "editor.button.save");
         button(Layout.Role.CLEAR, Items.BUCKET, "editor.button.clear");
         if (station == Station.CRAFTING) button(Layout.Role.ORDER, Items.REPEATER, "editor.button.order", ServerText.get(anyOrder ? "editor.on" : "editor.off"));
@@ -443,12 +443,12 @@ final class EditorSession {
                 searchText.isEmpty() ? "" : ServerText.get("editor.button.category.search_all"),
                 searchText.isEmpty() || !list.isEmpty() ? "" : ServerText.get("editor.button.category.search_none"),
                 ServerText.get("editor.button.category.hint"));
-        menu.setInventorySlotContents(Layout.slot(Layout.Role.CATEGORY, 0), cat);
+        put(Layout.slot(Layout.Role.CATEGORY, 0), cat);
         button(Layout.Role.PREV, Items.PAPER, "editor.button.prev");
         button(Layout.Role.NEXT, Items.PAPER, "editor.button.next");
         for (int i = 0; i < Layout.PICKER; i++) {
             int at = pickerPage * Layout.PICKER + i;
-            picker.setInventorySlotContents(i, at < list.size() ? list.get(at).stack.copy() : ItemStack.EMPTY);
+            put(Layout.slot(Layout.Role.PICKER, i), at < list.size() ? list.get(at).stack.copy() : ItemStack.EMPTY);
         }
     }
 
@@ -477,7 +477,7 @@ final class EditorSession {
                 lore.add(line.toString());
             }
             if (r.name.equals(pendingDelete)) lore.add(ServerText.get("list.confirm_delete"));
-            menu.setInventorySlotContents(Layout.slot(Layout.Role.LIST, i), named(icon, ServerText.get("list.entry", r.name), lore.toArray(new String[0])));
+            put(Layout.slot(Layout.Role.LIST, i), named(icon, ServerText.get("list.entry", r.name), lore.toArray(new String[0])));
         }
         button(Layout.Role.BACK, Items.ARROW, "editor.button.back");
         button(Layout.Role.PREV, Items.PAPER, "editor.button.prev");
@@ -503,7 +503,12 @@ final class EditorSession {
 
     private void button(Layout.Role role, Item item, String key, Object... args) {
         String[] lines = ServerText.get(key + ".lore", args).split("\n");
-        menu.setInventorySlotContents(Layout.slot(role, 0), named(new ItemStack(item), ServerText.get(key, args), lines));
+        put(Layout.slot(role, 0), named(new ItemStack(item), ServerText.get(key, args), lines));
+    }
+
+    private void put(int slot, ItemStack stack) {
+        if (slot < Layout.TOP) top.setInventorySlotContents(slot, stack);
+        else bottom.setInventorySlotContents(slot - Layout.TOP, stack);
     }
 
     private static ItemStack named(ItemStack stack, String name, String... lore) {

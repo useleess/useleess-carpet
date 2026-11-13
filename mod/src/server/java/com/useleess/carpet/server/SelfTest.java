@@ -122,7 +122,8 @@ final class SelfTest extends CommandBase {
         return "mode=" + s.mode() + " ready=" + s.ready() + " searchready=" + s.searchReady() + " closed=" + s.closed()
                 + " category=" + s.category().key + " page=" + s.pickerPage() + " search=[" + s.searchText() + "] editing=" + s.editing()
                 + " anvil=[" + s.anvilName() + "] cost=" + s.anvilCost() + " anyorder=" + s.anyOrder() + " station=" + s.station() + " title=[" + s.title() + "] grid=" + grid + " output=" + show(s.output())
-                + " selected=" + show(s.selected()) + " picker0=" + show(s.pickerStack(0)) + " list0=" + show(s.menuStack(0))
+                + " selected=" + show(s.selected()) + " picker0=" + show(s.shown(Layout.slot(Layout.Role.PICKER, 0))) + " picker53=" + show(s.shown(Layout.slot(Layout.Role.PICKER, Layout.PICKER - 1)))
+                + " list0=" + show(s.shown(Layout.slot(Layout.Role.LIST, 0))) + " window=" + player.openContainer.inventorySlots.size()
                 + " recipes=" + RecipeStore.current.names();
     }
 

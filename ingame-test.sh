@@ -83,7 +83,7 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 62"
+echo "SCOPE-TEST total 63"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -663,6 +663,10 @@ ok=1
 click NEXT 0 0 && uct state UcOp && ans_has "page=1 " && ! ans_has "picker0=$first " && click PREV 0 0 && uct state UcOp && ans_has "page=0 " && ans_has "picker0=$first " && ok=0
 rresult recipes/paging $ok "first $first, then $ANS"
 
+# #9: a 6-row window, the first page full (54 items on top), the grid and buttons in the 36 slots below
+ok=1; uct state UcOp && ans_has "window=90 " && ans_has "page=0 " && ! ans_has "picker53=- " && ok=0
+rresult recipes/layout-6rows $ok "$ANS"
+
 # search through the anvil window: the grid is kept, the picker is filtered, back in the editor
 click CLEAR; uct pick UcOp minecraft:diamond && click GRID 4 0
 ok=1
@@ -799,9 +803,9 @@ rresult recipes/close-restores $ok "before: $INV_BEFORE; now: $ANS"
 uct cmd UcOp customrecipe; until_state 20 "mode=EDITOR ready=true"
 # items the world itself dropped (the flat world's villages) are cleared first: only new ones count
 ask "kill @e[type=item]" "Killed|found nothing"
-click SLOT 27 0 PICKUP; click SLOT 27 0 QUICK_MOVE; click SLOT 28 0 QUICK_MOVE; click SLOT 27 0 SWAP; click SLOT 27 8 SWAP; click SLOT 27 0 THROW; click SLOT 27 1 THROW
-click OUTSIDE 0 0 PICKUP; click OUTSIDE 0 1 PICKUP; click OUTSIDE 0 0 THROW; click SLOT 28 0 PICKUP_ALL; click SLOT 28 2 CLONE; click SLOT 28 0 QUICK_CRAFT; click GRID 0 0 QUICK_MOVE
-click SLOT 6 0 QUICK_MOVE; click SLOT 15 0 THROW; click SLOT 62 0 SWAP
+click PICKER 0 0 PICKUP; click PICKER 0 0 QUICK_MOVE; click PICKER 1 0 QUICK_MOVE; click PICKER 0 0 SWAP; click PICKER 0 8 SWAP; click PICKER 0 0 THROW; click PICKER 0 1 THROW
+click OUTSIDE 0 0 PICKUP; click OUTSIDE 0 1 PICKUP; click OUTSIDE 0 0 THROW; click PICKER 1 0 PICKUP_ALL; click PICKER 1 2 CLONE; click PICKER 1 0 QUICK_CRAFT; click GRID 0 0 QUICK_MOVE
+click SAVE 0 0 QUICK_MOVE; click ALL 0 0 THROW; click PICKER 53 0 SWAP; click NEXT 0 0 SWAP
 click SEARCH; until_state 20 "searchready=true"; click SLOT 0 0 QUICK_MOVE; click SLOT 0 0 THROW; click SLOT 1 0 SWAP; click SLOT 30 0 QUICK_MOVE; uct click UcOp ANVIL_OUT; until_state 20 "mode=EDITOR ready=true"
 ok=1; uct inv UcOp; real="$ANS"; ask "testfor @e[type=item,x=0,y=0,z=0,r=100]" "Found " "found nothing|cannot be found|No entity|not found|did not match"; gone=$?
 ans_has "UCT inv \[\] cursor=-" && [ $gone = 1 ] && ok=0

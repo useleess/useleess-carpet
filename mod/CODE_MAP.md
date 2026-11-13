@@ -94,8 +94,8 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
   ask Minecraft alone for the editor's clash check; `RecipeStore.live` = the guarded lookup all of them share), `ItemCodec`,
   `Catalogue` + `Category` (picker items), `CustomRecipeCommand` (`/customrecipe`, level 2).
 - The editor: `Editor` (open sessions), `EditorSession` (all state + every click; shows itself through two fake
-  inventories, so the real inventory is never part of the window), `EditorContainer` (chest window, 27 menu + 36 picker
-  slots, own click handling only), `SearchContainer` + `SearchWindow` (the anvil search), `TitleText` (short window-title statuses, game-free), `Layout` (slot roles),
+  inventories, so the real inventory is never part of the window), `EditorContainer` (6-row chest window: 54 picker / list
+  slots on top, 36 grid + button slots below, own click handling only), `SearchContainer` + `SearchWindow` (the anvil search), `TitleText` (short window-title statuses, game-free), `Layout` (slot roles),
   `Vault` (saves + empties the real inventory first, restores on exit / close / leave / death / stop / off-switch / next join).
 - Careful break: `CarefulBreak` (`wants`; reads `LoggerRegistry.getPlayerSubscriptions`, the player's option; saves a
   changed choice from `Hooks.tick` / join / leave, puts a saved one back on join; every failure = Sneak needed, logged +
