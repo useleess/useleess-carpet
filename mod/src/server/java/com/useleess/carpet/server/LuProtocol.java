@@ -21,13 +21,14 @@ final class LuProtocol {
     static final int CAPABILITIES = 0, PLACEMENT_INTENT = 1, SHULKER_TAKE = 5;
     private static final int MAX_STATE_BYTES = 1024;
     /**
-     * Properties kept as the placement made them: the world's (power, growth, neighbours), the block's kind (variant, colour).
-     * LU's list plus layers: on Forge LU's drop check refuses those, a vanilla block has no drop count per state.
+     * Properties kept as the placement made them: the world's (power, growth, neighbours), contents and amounts (a cauldron's
+     * water, snow layers, cake bites: LU #16), the block's kind (variant, colour). The same list as LU's server part.
      */
     private static final Set<String> WORLD_MADE = new HashSet<>(Arrays.asList(
             "powered", "power", "triggered", "extended", "enabled", "locked", "attached", "disarmed", "occupied", "part", "short",
             "check_decay", "decayable", "snowy", "age", "conditional", "has_bottle_0", "has_bottle_1", "has_bottle_2", "contents",
-            "eye", "explode", "nodrop", "has_record", "variant", "type", "color", "wet", "damage", "seamless", "legacy_data", "layers"));
+            "eye", "explode", "nodrop", "has_record", "variant", "type", "color", "wet", "damage", "seamless", "legacy_data",
+            "level", "layers", "bites", "moisture", "stage"));
 
     private LuProtocol() {}
 

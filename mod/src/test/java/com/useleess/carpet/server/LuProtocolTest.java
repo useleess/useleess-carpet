@@ -75,7 +75,7 @@ class LuProtocolTest {
         for (String p : new String[] {"facing", "half", "shape", "open", "delay", "mode", "hinge", "rotation", "axis"}) {
             assertTrue(LuProtocol.settable(p, false, false), p);
         }
-        for (String p : new String[] {"powered", "power", "variant", "color", "age", "snowy", "layers"}) {
+        for (String p : new String[] {"powered", "power", "variant", "color", "age", "snowy", "layers", "level", "bites", "moisture", "stage"}) {
             assertFalse(LuProtocol.settable(p, false, false), p);
         }
         assertTrue(LuProtocol.settable("powered", true, false), "a lever's switch");
