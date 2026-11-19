@@ -513,13 +513,14 @@ fi
 rules_end
 fi
 
-# bots that sleep by themselves (#11, /autosleep): the bot UcSleep is the only player, so the night is skipped exactly
+# bots that sleep by themselves (#11; /player <bot> autosleep since #14): the bot UcSleep is the only player, so the night is skipped exactly
 # when it lies in bed
 if section botsleep/; then
 S="$BASE/botsleep"; mkdir -p "$S"; cd "$S" || exit 2
 cp "$A/$SERVER_JAR" .
 echo "eula=true" > eula.txt
 printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=4\nsnooper-enabled=false\nspawn-monsters=false\n' "$((PORT + 3))" > server.properties
+SERVER_OPTS="-Duseleess.carpet.selftest=1"
 BS_NOTFOUND="found nothing|cannot be found|No entity|not found|did not match|rror"
 # bs_join: UcSleep joins and stands at 2.5 4 2.5 in creative (it appears at 0 0 0 in the bedrock: a bot that suffocates
 # there comes back as a plain player, no longer a Carpet bot); prints why not (empty = ok)
@@ -547,25 +548,34 @@ bs_night() {
 rules_server
 why="$(bs_join)"
 if [ -n "$why" ]; then
-    for t in not-bot sleeps off no-bed remembered; do result botsleep/$t 1 "$why"; done
+    for t in not-bot old-command-gone tab-completion sleeps off no-bed remembered; do result botsleep/$t 1 "$why"; done
 else
     # 1. a real player name that is no bot is refused
-    ask "autosleep Nobody on" "is not a Carpet bot" "$BS_NOTFOUND|now goes to bed"; ok=$?
+    ask "player Nobody autosleep on" "is not a Carpet bot" "$BS_NOTFOUND|now goes to bed"; ok=$?
     result botsleep/not-bot $ok "answer $ok: $(tail -n 2 server.log | tr '\n' ' ')"
+    # the old /autosleep command is gone (#14: only /player <bot> autosleep)
+    ask "autosleep UcSleep on" "Unknown command" "now goes to bed"; ok=$?
+    result botsleep/old-command-gone $ok "answer $ok (0 = Unknown command): $(tail -n 2 server.log | tr '\n' ' ')"
+    # tab completion of Carpet's /player offers autosleep after the bot's name, then on / off
+    say "op UcSleep"; sleep 1
+    uct tabs UcSleep /player_UcSleep_auto; first="$ANS"
+    uct tabs UcSleep /player_UcSleep_autosleep_; second="$ANS"
+    ok=1; printf '%s' "$first" | grep -q "autosleep" && printf '%s' "$second" | grep -q "on" && printf '%s' "$second" | grep -q "off" && ok=0
+    result botsleep/tab-completion $ok "after 'auto': '$first'; after 'autosleep ': '$second'"
     # 2. on + a bed in reach: the bot goes to bed by itself and the night is skipped
     bs_bed
-    ask "autosleep UcSleep on" "UcSleep now goes to bed by itself" "rror|not a Carpet bot"; ok=$?
+    ask "player UcSleep autosleep on" "UcSleep now goes to bed by itself" "rror|not a Carpet bot"; ok=$?
     got=""; [ $ok = 0 ] && got="$(bs_night 40)"
     ok=1; [ "$got" = skipped ] && ok=0
-    result botsleep/sleeps $ok "autosleep on, bed 2 blocks away, midnight: '$got' after 40 s ($(tail -n 3 server.log | tr '\n' ' '))"
+    result botsleep/sleeps $ok "/player UcSleep autosleep on, bed 2 blocks away, midnight: '$got' after 40 s ($(tail -n 3 server.log | tr '\n' ' '))"
     # 3. off: the bot stays up, the night goes on
-    ask "autosleep UcSleep off" "no longer goes to bed" "rror" >/dev/null
+    ask "player UcSleep autosleep off" "no longer goes to bed" "rror" >/dev/null
     got="$(bs_night 15)"
     ok=1; [ "$got" = night ] && ok=0
     result botsleep/off $ok "autosleep off: the night was '$got' (expected night)"
     # 4. on without a bed in reach: told so, and the night goes on
     bs_nobed
-    ask "autosleep UcSleep on" "no free bed within 3 blocks of UcSleep" "rror"; told=$?
+    ask "player UcSleep autosleep on" "no free bed within 3 blocks of UcSleep" "rror"; told=$?
     got="$(bs_night 15)"
     ok=1; [ $told = 0 ] && [ "$got" = night ] && ok=0
     result botsleep/no-bed $ok "no bed: told=$told (0 = yes), the night was '$got' (expected night)"
@@ -579,13 +589,93 @@ else
         if [ -z "$why" ]; then
             bs_bed
             night="$(bs_night 40)"; [ "$night" = skipped ] && ok=0
-            ask "autosleep UcSleep" "UcSleep (goes|does not go) to bed" "rror" >/dev/null
+            ask "player UcSleep autosleep" "UcSleep (goes|does not go) to bed" "rror" >/dev/null
             why="after the restart the night was '$night' (expected skipped); state: $(grep -E "to bed|bot sleep|Bots sleeping|Exception|UcSleep" server.log | tail -n 6 | tr '
 ' ' ')"
         fi
     else why="the server did not start again"; fi
     result botsleep/remembered $ok "$why (saved file: $saved)"
 fi
+rules_end
+fi
+
+# ---- portals and the End arrival (creativeNoClipNoPortals = UCC #7, obsidianPlatformNoRegen = #15): a server of its own.
+# Bots in creative stand in portal blocks placed at their feet; a flying one with the rule on stays, everything else goes.
+if section travel/; then
+T="$BASE/travel"; mkdir -p "$T"; cd "$T" || exit 2
+cp "$A/$SERVER_JAR" .
+echo "eula=true" > eula.txt
+printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=6\nsnooper-enabled=false\nspawn-monsters=false\n' "$((PORT + 4))" > server.properties
+SERVER_OPTS="-Duseleess.carpet.selftest=1"
+TV_NOTFOUND="found nothing|cannot be found|No entity|not found|did not match|rror"
+NOCLIP=creativeNoClipNoPortals
+PLATFORM=obsidianPlatformNoRegen
+# tv_join <bot> <x> <fly true|false>: the bot in creative at <x>.5 4 2.5 (on the flat world's grass), flying or not;
+# prints why not (empty = ok)
+tv_join() {
+    say "player $1 spawn"
+    wait_for server.log "$1 joined" 60 || { echo "$1 did not join within 60 s"; return; }
+    say "tp $1 $2.5 4 2.5 0 0"; say "gamemode creative $1"
+    until_ok 15 "testfor @a[name=$1,x=$2,y=4,z=2,dx=0,dy=0,dz=0]" "Found $1" "$TV_NOTFOUND" || { echo "$1 was never seen at its spot"; return; }
+    uct fly "$1" "$3"; ans_has "flying=$3" || echo "$1 flying could not be set to $3: '$ANS'"
+}
+# tv_block <x> <block>: the portal block at the bot's feet (placed once the bot is there: its chunk is loaded)
+tv_block() { until_ok 20 "setblock $1 4 2 minecraft:$2" "Block placed" "Cannot place|$TV_NOTFOUND" || echo "the $2 block could not be placed at $1 4 2"; }
+# tv_stays <bot> <x> <seconds>: still at its spot in the Overworld after the time (0 = stayed)
+tv_stays() {
+    sleep "$3"
+    ask "testfor @a[name=$1,x=$2,y=3,z=2,dx=0,dy=2,dz=0]" "Found $1" "$TV_NOTFOUND"
+}
+# tv_reaches <bot> <dimension> <seconds>: the bot is found in that dimension within the time (0 = yes)
+tv_reaches() {
+    end=$(($(date +%s) + $3))
+    while [ "$(date +%s)" -lt "$end" ]; do ask "testfor $1 {Dimension:$2}" "Found $1" "$TV_NOTFOUND|Unknown"; [ $? = 0 ] && return 0; sleep 1; done
+    return 1
+}
+tv_listed() {
+    ok=1; ask "carpet $1" "$1" && sleep 1 && tail -n 8 server.log | grep -q "false" && ask "carpet list" "$1" && ok=0
+    result "travel/$2" $ok "carpet $1 / carpet list did not show it with false: $(tail -n 6 server.log | tr '\n' ' ')"
+}
+tv_why() { echo "$1 ($(grep -v -E 'Found |found nothing|UCT ' server.log | tail -n 8 | tr '\n' ' '))"; }
+
+rules_server
+tv_listed $NOCLIP noclip-listed
+tv_listed $PLATFORM platform-listed
+ask "carpet $NOCLIP true" "$NOCLIP"
+
+# rule on: a flying bot in an end portal and one in a nether portal stay (creative players go after 1 tick otherwise)
+why="$(tv_join UcFlyEnd 2 true)"; [ -z "$why" ] && why="$(tv_block 2 end_portal)"
+ok=1; [ -z "$why" ] && tv_stays UcFlyEnd 2 8 && ok=0
+result travel/noclip-end-portal-flying-stays $ok "$(tv_why "${why:-UcFlyEnd left its end portal block while flying with $NOCLIP true}")"
+why="$(tv_join UcFlyNether 6 true)"; [ -z "$why" ] && why="$(tv_block 6 portal)"
+ok=1; [ -z "$why" ] && tv_stays UcFlyNether 6 8 && ok=0
+result travel/noclip-nether-portal-flying-stays $ok "$(tv_why "${why:-UcFlyNether left its nether portal block while flying with $NOCLIP true}")"
+
+# rule on, flying switched off: the portal works again (only flyers are left alone)
+ok=1; uct fly UcFlyEnd false; tv_reaches UcFlyEnd 1 60 && ok=0
+result travel/noclip-not-flying-still-goes $ok "$(tv_why "UcFlyEnd did not reach the End within 60 s after it stopped flying ($ANS)")"
+# UcFlyEnd arrived with obsidianPlatformNoRegen false: Minecraft built the platform (obsidian at 100 48 0)
+ok=1; uct fly UcFlyEnd true; say "tp UcFlyEnd 100 60 0"; sleep 1
+until_ok 15 "execute UcFlyEnd ~ ~ ~ testforblock 100 48 0 minecraft:obsidian" "Successfully found" "$TV_NOTFOUND|is not|not a valid" && ok=0
+result travel/platform-built-when-off $ok "$(tv_why "no obsidian at 100 48 0 in the End after an arrival with $PLATFORM false")"
+
+# rule off: the flying bot in the nether portal goes now (the Nether is made on its first visit)
+ok=1; ask "carpet $NOCLIP false" "$NOCLIP"; tv_reaches UcFlyNether -1 120 && ok=0
+result travel/noclip-off-flying-goes $ok "$(tv_why "UcFlyNether did not reach the Nether within 120 s with $NOCLIP false")"
+
+# obsidianPlatformNoRegen on: the platform is cleared, the next arrival leaves it cleared (it hovers: it flies)
+ok=1; why=""
+until_ok 15 "execute UcFlyEnd ~ ~ ~ fill 98 48 -2 102 48 2 minecraft:air" "blocks filled|filled" "$TV_NOTFOUND|Cannot place" || why="the platform could not be cleared"
+ask "carpet $PLATFORM true" "$PLATFORM"
+[ -z "$why" ] && why="$(tv_join UcArrive 10 true)"; [ -z "$why" ] && why="$(tv_block 10 end_portal)"
+if [ -z "$why" ]; then
+    if tv_reaches UcArrive 1 60; then
+        sleep 2
+        ask "execute UcFlyEnd ~ ~ ~ testforblock 100 48 0 minecraft:air" "Successfully found" "$TV_NOTFOUND|is not|not a valid" && ok=0
+        [ $ok = 0 ] || why="the obsidian came back at 100 48 0 after an arrival with $PLATFORM true"
+    else why="UcArrive did not reach the End within 60 s"; fi
+fi
+result travel/platform-not-rebuilt-when-on $ok "$(tv_why "$why")"
 rules_end
 fi
 

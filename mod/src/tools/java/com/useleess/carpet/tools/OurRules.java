@@ -57,5 +57,11 @@ public final class OurRules {
                     "SURVIVAL"),
             Rule.plain("litematicaShulkerRestock", false,
                     "Litematica Upgraded's printer and Easy Place may take the items they need out of shulker boxes in the player's inventory (the server moves them; vanilla cannot).",
-                    "SURVIVAL")));
+                    "SURVIVAL"),
+            Rule.plain("creativeNoClipNoPortals", false,
+                    "Players flying in creative mode (as with creativeNoClip) are not taken by nether portals, end portals or end gateways; walking or falling in still works.",
+                    "CREATIVE"),
+            Rule.plain("obsidianPlatformNoRegen", false,
+                    "Players arriving in the End get no new obsidian platform: nothing is placed or cleared, they appear at the usual spot even if it is in the air.",
+                    "FEATURE")));
 }

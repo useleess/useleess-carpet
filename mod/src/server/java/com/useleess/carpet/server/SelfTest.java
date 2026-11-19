@@ -97,9 +97,19 @@ final class SelfTest extends CommandBase {
             case "place": out = place(player, args); break;
             case "recipebook": out = recipeBook(player, args[2]); break;
             case "caps": out = Arrays.toString(LuServer.capabilities()); break;
+            case "fly": out = fly(player, Boolean.parseBoolean(args[2])); break;
+            case "tabs": out = String.valueOf(server.getTabCompletions(player, String.join(" ", Arrays.copyOfRange(args, 2, args.length)).replace('_', ' '), null, false)); break;
             default: out = "unknown action";
         }
         sender.sendMessage(new TextComponentString(ServerText.get("selftest.line", args[0], out)));
+    }
+
+    /** Creative flight on / off, as the game's own ability switch does it. */
+    private static String fly(EntityPlayerMP player, boolean on) {
+        player.capabilities.allowFlying = true;
+        player.capabilities.isFlying = on;
+        player.sendPlayerAbilities();
+        return "flying=" + player.capabilities.isFlying;
     }
 
     private static String show(ItemStack s) {

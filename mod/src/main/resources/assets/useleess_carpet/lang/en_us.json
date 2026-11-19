@@ -142,7 +142,8 @@
   "careful.failed": "Careful break had a problem and works only while you sneak for now (your choice may not be remembered). See the server log.",
   "botsleep.not_bot": "%s is not a Carpet bot. Only bots made with /player can sleep by themselves.",
   "botsleep.is_on": "%s goes to bed by itself every night.",
-  "botsleep.is_off": "%s does not go to bed by itself. Turn it on with /autosleep <bot> on.",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s does not go to bed by itself. Turn it on with /player <bot> autosleep on.",
   "botsleep.now_on": "%s now goes to bed by itself every night, in a free bed within 3 blocks.",
   "botsleep.now_off": "%s no longer goes to bed by itself.",
   "botsleep.no_bed": "There is no free bed within 3 blocks of %s right now. Put one next to it.",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "Bots sleeping by themselves failed and is switched off until the server restarts.",
   "log.botsleep_load_failed": "The bot sleep choices in %s could not be read; they are not restored.",
   "log.botsleep_save_failed": "The bot sleep choice for %s could not be saved.",
-  "log.recipebook_no_connection": "%s has no connection, so a newly unlocked recipe was not sent to the game (it reaches the game at the next join). Where it came from:"
+  "log.recipebook_no_connection": "%s has no connection, so a newly unlocked recipe was not sent to the game (it reaches the game at the next join). Where it came from:",
+  "log.travel_rule_failed": "Rule %s failed; it works like vanilla until the server restarts",
+  "travel.rule_failed": "[Useleess Carpet] Rule %s failed and works like vanilla until the next restart: %s"
 }

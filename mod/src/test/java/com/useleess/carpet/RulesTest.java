@@ -80,7 +80,13 @@ class RulesTest {
         String[] skip = hook("endPortalNoTeleportPlayer", "skipFor");
         assertEquals(Arrays.asList("aqh", "a", "(Lamu;Let;Lawt;Lvg;)V"), Arrays.asList(at));
         Map<String, byte[]> rules = jar("useleess.rulesJar");
-        List<AbstractInsnNode> c = code(method(node(rules, at[0]), at[1], at[2]));
+        List<AbstractInsnNode> all = code(method(node(rules, at[0]), at[1], at[2]));
+        // creativeNoClipNoPortals' Hooks.portalSkips check comes first (UCC #7), then this rule's check
+        int start = 0;
+        while (!(all.get(start) instanceof FieldInsnNode && ((FieldInsnNode) all.get(start)).name.equals("endPortalNoTeleportPlayer"))) start++;
+        assertTrue(all.subList(0, start).stream().anyMatch(i -> i instanceof MethodInsnNode && ((MethodInsnNode) i).name.equals("portalSkips")),
+                "only the portalSkips check comes before the rule's check: " + start);
+        List<AbstractInsnNode> c = all.subList(start, all.size());
         FieldInsnNode rule = (FieldInsnNode) c.get(0);
         assertEquals(Opcodes.GETSTATIC, rule.getOpcode());
         assertEquals("carpet/CarpetSettings", rule.owner);
@@ -109,8 +115,9 @@ class RulesTest {
         List<String> changed = new ArrayList<>();
         for (String name : master.keySet()) if (!Arrays.equals(master.get(name), rules.get(name))) changed.add(name);
         Collections.sort(changed);
-        assertTrue(changed.containsAll(Arrays.asList("aqh.class", "carpet/CarpetSettings.class", "carpet/CarpetServer.class", "net/minecraft/server/MinecraftServer.class", "aow.class", "carpet/logging/LoggerRegistry.class", "akh.class", "akp.class", "qm.class")), changed.toString());
-        assertEquals(12, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList, the player class, the player's network handler (pa), aow, LoggerRegistry, PotionHelper (akh), FurnaceRecipes (akp) and RecipeBookServer (qm): " + changed);
+        assertTrue(changed.containsAll(Arrays.asList("aqh.class", "carpet/CarpetSettings.class", "carpet/CarpetServer.class", "net/minecraft/server/MinecraftServer.class", "aow.class", "carpet/logging/LoggerRegistry.class", "akh.class", "akp.class", "qm.class",
+                "carpet/commands/CommandPlayer.class", "ass.class", "awf.class", "anc.class")), changed.toString());
+        assertEquals(16, changed.size(), "aqh, CarpetSettings, CarpetServer, MinecraftServer, PlayerList, the player class, the player's network handler (pa), aow, LoggerRegistry, PotionHelper (akh), FurnaceRecipes (akp), RecipeBookServer (qm), Carpet's CommandPlayer, BlockPortal (ass), TileEntityEndGateway (awf) and Teleporter (anc): " + changed);
         for (String name : rules.keySet()) {
             if (master.containsKey(name)) continue;
             assertTrue(name.startsWith("com/useleess/carpet/server/") || name.startsWith("com/useleess/carpet/core/")
@@ -132,9 +139,9 @@ class RulesTest {
                 }
             }
         }
-        Collections.sort(called);
-        assertEquals(Arrays.asList("brewIngredient", "brewResult", "brews", "clickDone", "clickStarted", "customPayload", "noConnection", "onGround", "playerDying", "playerJoined", "playerLeft",
-                "serverLoaded", "serverStopping", "smeltResult", "tick"), called);
+        assertEquals(Arrays.asList("brewIngredient", "brewResult", "brews", "clickDone", "clickStarted", "customPayload", "endArrival", "noConnection", "onGround", "playerCommand", "playerDying",
+                "playerJoined", "playerLeft", "playerTabs", "portalSkips", "serverLoaded", "serverStopping", "smeltResult", "tick"), new ArrayList<>(new java.util.TreeSet<>(called)));
+        assertEquals(3, Collections.frequency(called, "portalSkips"), "nether portal, end portal and end gateway each ask once: " + called);
     }
 
     private static List<String> calls(MethodNode m) {
@@ -147,7 +154,8 @@ class RulesTest {
     @Test void stationLookupsAnswerFromOurHooksFirst() throws IOException {
         Map<String, byte[]> master = jar("useleess.masterJar");
         Map<String, byte[]> rules = jar("useleess.rulesJar");
-        String[][] lookups = {{"akp", "smeltResult", "ARETURN"}, {"akh", "brewIngredient", "IRETURN"}, {"akh", "brews", "IRETURN"}, {"akh", "brewResult", "ARETURN"}, {"qm", "noConnection", "RETURN"}};
+        String[][] lookups = {{"akp", "smeltResult", "ARETURN"}, {"akh", "brewIngredient", "IRETURN"}, {"akh", "brews", "IRETURN"}, {"akh", "brewResult", "ARETURN"}, {"qm", "noConnection", "RETURN"},
+                {"ass", "portalSkips", "RETURN"}, {"awf", "portalSkips", "RETURN"}, {"anc", "endArrival", "RETURN"}, {"carpet/commands/CommandPlayer", "playerCommand", "RETURN"}};
         for (String[] l : lookups) {
             MethodNode patched = null, original = null;
             for (MethodNode m : node(rules, l[0]).methods) {
@@ -168,6 +176,30 @@ class RulesTest {
             for (AbstractInsnNode i : code(original)) if (i.getOpcode() >= 0) own++;
             assertEquals(own + call + added, ops.size(), l[1] + ": the call, the answer and Minecraft's own code, nothing else");
             assertEquals(calls(original), calls(patched).subList(1, calls(patched).size()), l[1] + ": Minecraft's own calls keep their exact names");
+        }
+    }
+
+    /** Carpet's /player tab list (#14) passes through Hooks.playerTabs at every return, the rest is Carpet's own. */
+    @Test void playerTabListPassesOurHookAtEveryReturn() throws IOException {
+        Map<String, byte[]> master = jar("useleess.masterJar");
+        Map<String, byte[]> rules = jar("useleess.rulesJar");
+        String owner = "carpet/commands/CommandPlayer";
+        for (MethodNode m : node(master, owner).methods) {
+            if (!m.desc.endsWith(")Ljava/util/List;")) continue;
+            MethodNode patched = null;
+            for (MethodNode p : node(rules, owner).methods) if (p.name.equals(m.name) && p.desc.equals(m.desc)) patched = p;
+            int returns = 0, hooks = 0;
+            for (AbstractInsnNode i : code(m)) if (i.getOpcode() == Opcodes.ARETURN) returns++;
+            for (AbstractInsnNode i : code(patched)) if (i instanceof MethodInsnNode && ((MethodInsnNode) i).name.equals("playerTabs")) hooks++;
+            assertTrue(returns > 0);
+            assertEquals(returns, hooks, "one playerTabs call per return");
+        }
+    }
+
+    @Test void travelRulesAreDefaultOffRulesWithoutADataHook() throws IOException {
+        for (String name : Arrays.asList("creativeNoClipNoPortals", "obsidianPlatformNoRegen")) {
+            assertTrue(OurRules.ALL.stream().anyMatch(r -> r.name.equals(name) && !r.byDefault && !r.hooked), name);
+            assertNull(RulesMaker.hooks("1.12.2").getProperty(name + ".method"));
         }
     }
 

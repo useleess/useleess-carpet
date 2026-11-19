@@ -100,10 +100,16 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
 - Careful break: `CarefulBreak` (`wants`; reads `LoggerRegistry.getPlayerSubscriptions`, the player's option; saves a
   changed choice from `Hooks.tick` / join / leave, puts a saved one back on join; every failure = Sneak needed, logged +
   told once) and `ChoiceStore` (game-free: one saved word per player UUID, here `<world>/useleess-carpet/careful-break.json`).
-- Bot sleep (#11): `BotSleepCommand` (`/autosleep <bot> [on|off]`, anyone, Carpet bots only) + `BotSleep` (from
+- Bot sleep (#11, #14): `BotSleepCommand` (the `autosleep` action of Carpet's own `/player`: `Hooks.playerCommand` at the start of
+  `CommandPlayer.execute` answers `/player <bot> autosleep [on|off]` while Carpet's `commandPlayer` rule is on, everything else stays
+  Carpet's; `Hooks.playerTabs` before each return of its tab list adds the action; Carpet bots only) + `BotSleep` (from
   `Hooks.tick` once a second: a bot with it on that is awake at night lies down in the nearest free bed within
   Minecraft's reach via `trySleep`; saved in `ChoiceStore` `<world>/useleess-carpet/bot-sleep.json`; a failure = off for
   every bot, logged + told to ops).
+- Travel rules: `TravelRules` (`creativeNoClipNoPortals`, UCC #7: `Hooks.portalSkips` at the start of `BlockPortal` /
+  `BlockEndPortal.onEntityCollidedWithBlock` and `TileEntityEndGateway.teleportEntity` leaves creative flyers alone;
+  `obsidianPlatformNoRegen`, #15: `Hooks.endArrival` at the start of `Teleporter.placeInPortal` places an End arrival like
+  Minecraft does, minus the platform; a failure = that rule acts vanilla, logged + told to ops once).
 - `SelfTest`: `/uct`, registered only with `-Duseleess.carpet.selftest=1`; the in-game tests drive editors with it by slot role.
 - `ScopeSwitch`: rule `redstoneScopeLogger` (plain rule, read by name) -> `com.redstonescope.RecordingSwitch.setOn`, synced
   from `Hooks.tick` only on a change; a missing class/method is logged once + told to ops, nothing else breaks.
@@ -119,7 +125,7 @@ body (Forge's compile jar gives some `IRecipe` methods default bodies the server
   `processTryUseItemOnBlock` read the spots with a waiting request (`PendingIntents`, game-free) before and after a click;
   a changed block = placed by it, it gets the asked state. Keep `LuProtocol`'s property list matched with LU's own.
 - Adding a hook: one `hook(...)` line in `ServerLayer` + a public static method in `Hooks`; `RulesTest` lists the changed classes.
-  `answer(...)` = a hook whose answer (non-null object / true) the patched method returns at once (it adds the jump's frame); a void method returns on true).
+  `returned(...)` = a hook that gets a method's result before each `areturn` and returns its own. `answer(...)` = a hook whose answer (non-null object / true) the patched method returns at once (it adds the jump's frame); a void method returns on true).
 - Crash guard (#12): `Hooks.noConnection` answers at the start of `RecipeBookServer.sendPacket`: a player without a
   connection gets no recipe-book message (logged once with the stack) instead of a server crash.
 
@@ -155,5 +161,7 @@ with its default, the hook at the method's start, a missing target fails the bui
   `recipes/`: the custom-recipe editor on its own server with `/uct` (survival op fake players, clicks by slot role).
   `rules/`: our rules on their own server (listed with its default, a Carpet fake player in an end portal stays /
   goes, items still go, `carpet setDefault` kept over a restart). `botsleep/`: a Carpet bot, the only player, with a
-  bed in reach skips the night with /autosleep on, not with off / no bed, kept over a restart. `carefulbreak/`: a Carpet fake player mining dirt, drop in the
+  bed in reach skips the night with /player <bot> autosleep on (old /autosleep gone, tab completion), not with off / no bed, kept over a restart. `travel/`: creative flyers in end / nether portals stay with
+  creativeNoClipNoPortals on, go when not flying or with it off; the End platform is built with obsidianPlatformNoRegen off, a
+  cleared one stays cleared with it on. `carefulbreak/`: a Carpet fake player mining dirt, drop in the
   inventory or on the ground per option / rule, the choice kept over a restart. `FILTER=` skips the parts it does not need.

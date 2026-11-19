@@ -48,8 +48,13 @@
   },
   {
    "prefix": "botsleep/",
-   "min": 5,
-   "what": "bots that sleep by themselves (#11, /autosleep <bot> on|off): a non-bot refused, on + a bed in reach = the bot goes to bed and the night is skipped, off = stays up, no bed in reach = told + stays up, the choice is remembered over a server restart"
+   "min": 7,
+   "what": "bots that sleep by themselves (#11; /player <bot> autosleep [on|off] since #14): a non-bot refused, the old /autosleep gone, tab completion offers autosleep + on/off, on + a bed in reach = the bot goes to bed and the night is skipped, off = stays up, no bed in reach = told + stays up, the choice is remembered over a server restart"
+  },
+  {
+   "prefix": "travel/",
+   "min": 8,
+   "what": "creativeNoClipNoPortals (UCC #7: listed, rule on = a creative flyer stays in an end portal and a nether portal, not flying = goes, rule off = the flyer goes) and obsidianPlatformNoRegen (#15: listed, off = Minecraft builds the platform, on = a cleared platform stays cleared after an arrival)"
   },
   {
    "prefix": "recipes/recipebook-",

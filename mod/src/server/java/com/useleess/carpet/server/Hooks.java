@@ -1,6 +1,9 @@
 package com.useleess.carpet.server;
 
+import net.minecraft.command.CommandException;
 import net.minecraft.command.CommandHandler;
+import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.NetHandlerPlayServer;
@@ -12,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
@@ -19,7 +23,7 @@ import java.util.UUID;
 /**
  * The few places Minecraft and Carpet call into us (patched in by the build, see tools/ServerLayer): server loaded,
  * every tick (bots going to bed at night), player joined / left / dying, server stopping, a player's "on the ground", a
- * mod's message from a client, a click on a block, the furnace's and the brewing stand's recipe lookups, a recipe-book message. Each one is guarded: a failure
+ * mod's message from a client, a click on a block, the furnace's and the brewing stand's recipe lookups, a recipe-book message, Carpet's /player (bot sleep), portals and the End arrival. Each one is guarded: a failure
  * switches the feature off.
  */
 public final class Hooks {
@@ -41,7 +45,6 @@ public final class Hooks {
             CustomRecipes.register();
             CommandHandler commands = (CommandHandler) server.getCommandManager();
             commands.registerCommand(new CustomRecipeCommand());
-            commands.registerCommand(new BotSleepCommand());
             if (SelfTest.enabled()) commands.registerCommand(new SelfTest());
         });
     }
@@ -150,6 +153,26 @@ public final class Hooks {
         if (player.connection != null) return false;
         if (NO_CONNECTION_TOLD.add(player.getUniqueID())) Guard.LOG.warn(ServerText.get("log.recipebook_no_connection", player.getName()), new IllegalStateException());
         return true;
+    }
+
+    /** Carpet's /player, at its start (#14): true = {@code /player <bot> autosleep [on|off]} was answered by us. */
+    public static boolean playerCommand(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        return BotSleepCommand.handles(server, sender, args);
+    }
+
+    /** Carpet's /player tab completion, as it returns: our autosleep action added. */
+    public static List<String> playerTabs(List<String> carpets, String[] args) {
+        return BotSleepCommand.tabs(carpets, args);
+    }
+
+    /** Nether portal / end portal collision and the end gateway's teleport, at their start: true = the entity is not taken (UCC #7). */
+    public static boolean portalSkips(Entity entity) {
+        return TravelRules.skipsPortal(entity);
+    }
+
+    /** Teleporter.placeInPortal, at its start: true = placed in the End without a new obsidian platform (#15). */
+    public static boolean endArrival(Entity entity) {
+        return TravelRules.placedWithoutPlatform(entity);
     }
 
     /** Before the death drops: the real items are back, so the game rules decide what is dropped. */

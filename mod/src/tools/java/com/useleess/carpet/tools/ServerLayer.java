@@ -110,6 +110,19 @@ final class ServerLayer {
         // RecipeBookServer.sendPacket (#12): a player without a connection gets no recipe-book message instead of a crash
         answer(jar, names, "net/minecraft/stats/RecipeBookServer", "func_194081_a",
                 "(Lnet/minecraft/network/play/server/SPacketRecipeBook$State;L" + PLAYER + ";Ljava/util/List;)V", "noConnection", "(L" + PLAYER + ";)Z", 2);
+        // Carpet's /player (#14): "/player <bot> autosleep [on|off]" is answered by us, its tab list gets autosleep / on off
+        String commandArgs = "(L" + SERVER + ";Lnet/minecraft/command/ICommandSender;[Ljava/lang/String;";
+        answer(jar, names, "carpet/commands/CommandPlayer", "func_184881_a", commandArgs + ")V", "playerCommand", commandArgs + ")Z", 1, 2, 3);
+        returned(jar, names, "carpet/commands/CommandPlayer", "func_184883_a", commandArgs + "Lnet/minecraft/util/math/BlockPos;)Ljava/util/List;",
+                "playerTabs", "(Ljava/util/List;[Ljava/lang/String;)Ljava/util/List;", 3);
+        // portals leave creative flyers alone (UCC #7): nether + end portal collision, the end gateway's teleport
+        String entity = "Lnet/minecraft/entity/Entity;", skip = "(" + entity + ")Z";
+        String collide = "(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/state/IBlockState;" + entity + ")V";
+        answer(jar, names, "net/minecraft/block/BlockPortal", "func_180634_a", collide, "portalSkips", skip, 4);
+        answer(jar, names, "net/minecraft/block/BlockEndPortal", "func_180634_a", collide, "portalSkips", skip, 4);
+        answer(jar, names, "net/minecraft/tileentity/TileEntityEndGateway", "func_184306_a", "(" + entity + ")V", "portalSkips", skip, 1);
+        // Teleporter.placeInPortal (#15): an End arrival without a new obsidian platform
+        answer(jar, names, "net/minecraft/world/Teleporter", "func_180266_a", "(" + entity + "F)V", "endArrival", skip, 1);
         TreeSet<String> broken = new LinkCheck(jar).check(touched);
         if (!broken.isEmpty()) {
             throw new IllegalStateException("links that would break on the server:\n  " + String.join("\n  ", broken));
@@ -154,6 +167,15 @@ final class ServerLayer {
             list.add(new MethodInsnNode(Opcodes.INVOKESTATIC, HOOKS, hook, hookDesc, false));
             list.add(new VarInsnNode(Opcodes.ISTORE, local));
             target.instructions.insert(list);
+        });
+    }
+
+    /** Before each {@code areturn} of a method: {@code return Hooks.<hook>(result, locals...)}. */
+    private static void returned(Map<String, byte[]> jar, NameBridge names, String owner, String method, String desc, String hook, String hookDesc, int... locals) {
+        patch(jar, names, owner, method, desc, target -> {
+            for (AbstractInsnNode insn : target.instructions.toArray()) {
+                if (insn.getOpcode() == Opcodes.ARETURN) target.instructions.insertBefore(insn, call(hook, hookDesc, locals));
+            }
         });
     }
 

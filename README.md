@@ -52,8 +52,10 @@ CarpetSP's rule screen.
 | `endPortalNoTeleportPlayer` | false | Players touching an end portal stay where they are; items, mobs and other entities still go through (end-portal farms keep working). |
 | `customRecipes` | true | Ops can make their own crafting, furnace and brewing stand recipes with `/customrecipe` (see below). Off = saved recipes do not match and the command is refused; the recipe files stay. |
 | `antiNoFall` | false | The server checks for itself that a player is standing on something before it ends their fall, so no-fall cheats (a client that always says it is on the ground) still take fall damage. Honest players notice nothing. |
+| `creativeNoClipNoPortals` | false | Players flying in creative mode (as with `creativeNoClip`) are not taken by nether portals, end portals or end gateways; walking or falling in still works. |
 | `litematicaAccuratePlacement` | false | Blocks placed by Litematica Upgraded's printer and Easy Place get the schematic's exact state (facing, half, open, a lever's switch), but never another block kind, other drops or redstone power. |
 | `litematicaShulkerRestock` | false | Litematica Upgraded's printer and Easy Place may take the items they need out of shulker boxes in the player's inventory (the server moves them; vanilla cannot). |
+| `obsidianPlatformNoRegen` | false | Players arriving in the End get no new obsidian platform: nothing is placed or cleared, they appear at the usual spot even if it is in the air. |
 | `redstoneScopeLogger` | false | Redstone Scope records block changes for its tools (sub-tick, waveform, probes, rewind). Off = no recording, no extra work and no Redstone Scope log lines; its commands say it is switched off. |
 
 ## Careful break for each player
@@ -76,7 +78,8 @@ A Carpet bot (made with `/player <name> spawn`) can go to bed by itself every ni
 online still skips the night:
 
 1. Put a bed next to the bot (within 3 blocks across and 2 up or down; Minecraft's own reach).
-2. `/autosleep <bot> on` (anyone may use it; `/autosleep <bot> off` turns it off, `/autosleep <bot>` tells the state).
+2. `/player <bot> autosleep on` (whoever may use Carpet's `/player` for bots; `/player <bot> autosleep off` turns it off,
+   `/player <bot> autosleep` tells the state).
 
 At night the bot lies down in the nearest free bed; Minecraft wakes it in the morning as usual. Like a player it can't
 sleep with monsters close by, or in the Nether or the End. The choice is kept per world, also over a server restart.
