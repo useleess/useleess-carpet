@@ -1,5 +1,15 @@
 # Useleess Carpet changelog
 
+## 0.4.0 (beta) - 2026-11-19
+
+## New
+- Bot sleeping is now part of Carpet's own command: `/player <bot> autosleep [on|off]` (tab completion included). The separate `/autosleep` command is gone (#14).
+- New rule `creativeNoClipNoPortals` (default false): players flying in creative mode are not taken by nether portals, end portals or end gateways, handy with `creativeNoClip` (UCC #7).
+- New rule `obsidianPlatformNoRegen` (default false): players arriving in the End get no new obsidian platform (#15).
+
+## Fixes
+- Litematica Upgraded's Easy Place and printer no longer put cauldrons down already full of water (or snow with extra layers, cake already eaten, saplings already grown) when the schematic saved them that way: the server only sets what a player chooses by placing (LU #16).
+
 ## 0.3.0 (beta) - 2026-11-13
 
 - `/customrecipe` makes furnace and brewing stand recipes too (#7, #8): the arrow in the editor is now a recipe type
