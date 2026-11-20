@@ -142,7 +142,8 @@
   "careful.failed": "Försiktig brytning hade ett problem och fungerar bara när du smyger tills vidare (ditt val kanske inte minns). Se serverloggen.",
   "botsleep.not_bot": "%s är inte en Carpet-bot. Bara botar skapade med /player kan lägga sig att sova av sig själva.",
   "botsleep.is_on": "%s går och lägger sig av sig själv varje natt.",
-  "botsleep.is_off": "%s lägger sig inte av sig själv. Slå på det med /autosleep <bot> on.",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s går inte och lägger sig av sig själv. Slå på det med /player <bot> autosleep on.",
   "botsleep.now_on": "%s går nu och lägger sig av sig själv varje natt, i en ledig säng inom 3 block.",
   "botsleep.now_off": "%s lägger sig inte längre av sig själv.",
   "botsleep.no_bed": "Det finns ingen ledig säng inom 3 block från %s just nu. Ställ en bredvid den.",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "Botar som sover av sig själva misslyckades och är avstängt tills servern startas om.",
   "log.botsleep_load_failed": "Botvalen för sömn i %s kunde inte läsas; de återställs inte.",
   "log.botsleep_save_failed": "Botvalet för sömn för %s kunde inte sparas.",
-  "log.recipebook_no_connection": "%s har ingen anslutning, så ett nyupplåst recept skickades inte till spelet (det når spelet vid nästa inloggning). Varifrån det kom:"
+  "log.recipebook_no_connection": "%s har ingen anslutning, så ett nyupplåst recept skickades inte till spelet (det når spelet vid nästa inloggning). Varifrån det kom:",
+  "log.travel_rule_failed": "Regeln %s misslyckades; den fungerar som vanilla tills servern startas om",
+  "travel.rule_failed": "[Useleess Carpet] Regeln %s misslyckades och fungerar som vanilla tills nästa omstart: %s"
 }

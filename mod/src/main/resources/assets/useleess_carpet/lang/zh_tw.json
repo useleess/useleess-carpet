@@ -142,7 +142,8 @@
   "careful.failed": "謹慎挖掘發生問題，目前只會在你潛行時作用（你的設定可能不會被記住）。請查看伺服器記錄檔。",
   "botsleep.not_bot": "%s 不是 Carpet 假玩家。只有用 /player 建立的假玩家才能自己睡覺。",
   "botsleep.is_on": "%s 每晚都會自己去睡覺。",
-  "botsleep.is_off": "%s 不會自己去睡覺。請用 /autosleep <bot> on 將它開啟。",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s 不會自己上床睡覺。請用 /player <bot> autosleep on 開啟。",
   "botsleep.now_on": "%s 現在每晚都會自己去睡覺，會使用 3 格內的空床。",
   "botsleep.now_off": "%s 不再自己去睡覺。",
   "botsleep.no_bed": "%s 3 格內目前沒有空床。請在它旁邊放一張床。",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "假玩家自行睡覺的功能失敗，已關閉直到伺服器重新啟動。",
   "log.botsleep_load_failed": "無法讀取 %s 中的假玩家睡眠設定；這些設定不會被還原。",
   "log.botsleep_save_failed": "無法儲存 %s 的假玩家睡眠設定。",
-  "log.recipebook_no_connection": "%s 沒有連線，因此新解鎖的配方沒有送到遊戲中（會在下次加入時送達）。來源："
+  "log.recipebook_no_connection": "%s 沒有連線，因此新解鎖的配方沒有送到遊戲中（會在下次加入時送達）。來源：",
+  "log.travel_rule_failed": "規則 %s 失敗；在伺服器重新啟動前，它會像原版一樣運作",
+  "travel.rule_failed": "[Useleess Carpet] 規則 %s 失敗，直到下次重新啟動前都會像原版一樣運作：%s"
 }

@@ -142,7 +142,8 @@
   "careful.failed": "Vorsichtiges Abbauen hatte ein Problem und funktioniert vorerst nur, während du schleichst (deine Wahl wird womöglich nicht gemerkt). Siehe die Server-Logdatei.",
   "botsleep.not_bot": "%s ist kein Carpet-Bot. Nur Bots, die mit /player erstellt wurden, können selbstständig schlafen.",
   "botsleep.is_on": "%s geht jede Nacht selbstständig ins Bett.",
-  "botsleep.is_off": "%s geht nicht selbstständig ins Bett. Schalte es mit /autosleep <bot> on ein.",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s legt sich nicht von selbst ins Bett. Schalte das mit /player <bot> autosleep on ein.",
   "botsleep.now_on": "%s geht jetzt jede Nacht selbstständig in ein freies Bett innerhalb von 3 Blöcken.",
   "botsleep.now_off": "%s geht nicht mehr selbstständig ins Bett.",
   "botsleep.no_bed": "Im Moment gibt es kein freies Bett innerhalb von 3 Blöcken um %s. Stelle eines daneben.",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "Selbstständiges Schlafen der Bots ist fehlgeschlagen und bis zum Neustart des Servers ausgeschaltet.",
   "log.botsleep_load_failed": "Die Bot-Schlaf-Auswahlen in %s konnten nicht gelesen werden; sie werden nicht wiederhergestellt.",
   "log.botsleep_save_failed": "Die Bot-Schlaf-Auswahl für %s konnte nicht gespeichert werden.",
-  "log.recipebook_no_connection": "%s hat keine Verbindung, daher wurde ein neu freigeschaltetes Rezept nicht an das Spiel gesendet (es kommt beim nächsten Beitritt an). Herkunft:"
+  "log.recipebook_no_connection": "%s hat keine Verbindung, daher wurde ein neu freigeschaltetes Rezept nicht an das Spiel gesendet (es kommt beim nächsten Beitritt an). Herkunft:",
+  "log.travel_rule_failed": "Regel %s ist fehlgeschlagen; sie funktioniert wie Vanilla, bis der Server neu gestartet wird",
+  "travel.rule_failed": "[Useleess Carpet] Regel %s ist fehlgeschlagen und funktioniert bis zum nächsten Neustart wie Vanilla: %s"
 }

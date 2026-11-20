@@ -142,7 +142,8 @@
   "careful.failed": "慎重破壊で問題が起きました。今のところスニーク中のみ動作します (設定は記憶されないかもしれません)。サーバーログを確認してください。",
   "botsleep.not_bot": "%s は Carpet のボットではありません。/player で作ったボットだけが自分で寝られます。",
   "botsleep.is_on": "%s は毎晩自分でベッドに寝ます。",
-  "botsleep.is_off": "%s は自分ではベッドに寝ません。/autosleep <bot> on で有効にできます。",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s は自分からベッドに入りません。/player <bot> autosleep on で有効にしてください。",
   "botsleep.now_on": "%s は今後毎晩、3ブロック以内にある空いているベッドで自分から寝ます。",
   "botsleep.now_off": "%s は自分ではベッドに寝なくなりました。",
   "botsleep.no_bed": "現在 %s の3ブロック以内に空いているベッドがありません。そばにベッドを置いてください。",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "ボットの自動就寝が失敗したため、サーバーを再起動するまで無効になりました。",
   "log.botsleep_load_failed": "%s にあるボットの就寝設定を読み込めませんでした。復元はされていません。",
   "log.botsleep_save_failed": "%s のボットの就寝設定を保存できませんでした。",
-  "log.recipebook_no_connection": "%s は接続がないため、新しく解放されたレシピはゲームに送信されませんでした（次回の参加時にゲームへ届きます）。発生元:"
+  "log.recipebook_no_connection": "%s は接続がないため、新しく解放されたレシピはゲームに送信されませんでした（次回の参加時にゲームへ届きます）。発生元:",
+  "log.travel_rule_failed": "ルール %s の適用に失敗しました。サーバーが再起動するまではバニラと同じように動作します",
+  "travel.rule_failed": "[Useleess Carpet] ルール %s の適用に失敗しました。次の再起動までバニラと同じように動作します: %s"
 }

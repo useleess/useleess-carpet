@@ -142,7 +142,8 @@
   "careful.failed": "Rotura cuidadosa tuvo un problema y por ahora solo funciona mientras te agachas (tu elección puede no recordarse). Consulta el registro del servidor.",
   "botsleep.not_bot": "%s no es un bot de Carpet. Solo los bots creados con /player pueden dormir por sí mismos.",
   "botsleep.is_on": "%s se acuesta por sí mismo cada noche.",
-  "botsleep.is_off": "%s no se acuesta por sí mismo. Actívalo con /autosleep <bot> on.",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s no se acuesta por sí solo. Actívalo con /player <bot> autosleep on.",
   "botsleep.now_on": "%s ahora se acuesta por sí mismo cada noche, en una cama libre a menos de 3 bloques.",
   "botsleep.now_off": "%s ya no se acuesta por sí mismo.",
   "botsleep.no_bed": "Ahora mismo no hay ninguna cama libre a menos de 3 bloques de %s. Coloca una junto a él.",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "Los bots que duermen por sí mismos fallaron y están desactivados hasta que se reinicie el servidor.",
   "log.botsleep_load_failed": "No se pudieron leer las elecciones de sueño de bots en %s; no se restauran.",
   "log.botsleep_save_failed": "No se pudo guardar la elección de sueño de bot para %s.",
-  "log.recipebook_no_connection": "%s no tiene conexión, así que una receta recién desbloqueada no se envió al juego (llegará al juego en la próxima entrada). Origen:"
+  "log.recipebook_no_connection": "%s no tiene conexión, así que una receta recién desbloqueada no se envió al juego (llegará al juego en la próxima entrada). Origen:",
+  "log.travel_rule_failed": "La regla %s falló; funciona como en vanilla hasta que se reinicie el servidor",
+  "travel.rule_failed": "[Useleess Carpet] La regla %s falló y funciona como en vanilla hasta el próximo reinicio: %s"
 }

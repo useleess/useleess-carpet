@@ -142,7 +142,8 @@
   "careful.failed": "谨慎破坏出现问题，目前仅在您潜行时生效（您的设置可能不会被记住）。请查看服务器日志。",
   "botsleep.not_bot": "%s 不是 Carpet 假人。只有用 /player 创建的假人才能自己睡觉。",
   "botsleep.is_on": "%s 每晚会自己去睡觉。",
-  "botsleep.is_off": "%s 不会自己去睡觉。使用 /autosleep <bot> on 将其开启。",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s 不会自己上床睡觉。请使用 /player <bot> autosleep on 开启。",
   "botsleep.now_on": "%s 现在每晚会自己去睡觉，睡在 3 格范围内的空床上。",
   "botsleep.now_off": "%s 不再自己去睡觉。",
   "botsleep.no_bed": "%s 周围 3 格内目前没有空床。请在它旁边放一张床。",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "假人自动睡觉功能失败，已关闭，直到服务器重启。",
   "log.botsleep_load_failed": "无法读取 %s 中的假人睡觉设置；这些设置未被恢复。",
   "log.botsleep_save_failed": "无法保存 %s 的假人睡觉设置。",
-  "log.recipebook_no_connection": "%s 没有连接，因此新解锁的配方未发送到游戏中（它会在下次加入时到达游戏）。来源："
+  "log.recipebook_no_connection": "%s 没有连接，因此新解锁的配方未发送到游戏中（它会在下次加入时到达游戏）。来源：",
+  "log.travel_rule_failed": "规则 %s 失败；在服务器重启之前，它的行为与原版相同",
+  "travel.rule_failed": "[Useleess Carpet] 规则 %s 失败，在下次重启之前其行为与原版相同：%s"
 }

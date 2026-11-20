@@ -142,7 +142,8 @@
   "careful.failed": "Dikkatli kırma bir sorunla karşılaştı; şimdilik yalnızca eğilirken çalışıyor (seçimin hatırlanmayabilir). Sunucu günlüğüne bakın.",
   "botsleep.not_bot": "%s bir Carpet botu değil. Yalnızca /player ile yapılmış botlar kendi başına uyuyabilir.",
   "botsleep.is_on": "%s her gece kendi başına yatağa gider.",
-  "botsleep.is_off": "%s kendi başına yatağa gitmez. Açmak için /autosleep <bot> on komutunu kullanın.",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s kendi kendine yatağa girmez. Bunu /player <bot> autosleep on komutuyla açabilirsiniz.",
   "botsleep.now_on": "%s artık her gece, 3 blok içindeki boş bir yatağa kendi başına gider.",
   "botsleep.now_off": "%s artık kendi başına yatağa gitmez.",
   "botsleep.no_bed": "Şu an %s yanında 3 blok içinde boş yatak yok. Yanına bir tane koyun.",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "Botların kendi başına uyuması başarısız oldu ve sunucu yeniden başlayana kadar kapatıldı.",
   "log.botsleep_load_failed": "%s içindeki bot uyku seçimleri okunamadı; geri yüklenmedi.",
   "log.botsleep_save_failed": "%s için bot uyku seçimi kaydedilemedi.",
-  "log.recipebook_no_connection": "%s bağlantısı yok, bu yüzden yeni açılan bir tarif oyuna gönderilmedi (bir sonraki girişte oyuna ulaşır). Kaynağı:"
+  "log.recipebook_no_connection": "%s bağlantısı yok, bu yüzden yeni açılan bir tarif oyuna gönderilmedi (bir sonraki girişte oyuna ulaşır). Kaynağı:",
+  "log.travel_rule_failed": "Kural %s başarısız oldu; sunucu yeniden başlatılana kadar vanilla gibi çalışır",
+  "travel.rule_failed": "[Useleess Carpet] Kural %s başarısız oldu ve bir sonraki yeniden başlatmaya kadar vanilla gibi çalışır: %s"
 }

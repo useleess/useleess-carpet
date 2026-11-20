@@ -142,7 +142,8 @@
   "careful.failed": "Casse prudente a rencontré un problème et ne fonctionne que si vous vous accroupissez (Shift) pour l'instant (votre choix risque de ne pas être retenu). Voir le journal du serveur.",
   "botsleep.not_bot": "%s n'est pas un bot Carpet. Seuls les bots créés avec /player peuvent dormir par eux-mêmes.",
   "botsleep.is_on": "%s va se coucher tout seul chaque nuit.",
-  "botsleep.is_off": "%s ne se couche pas tout seul. Activez-le avec /autosleep <bot> on.",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s ne se couche pas tout seul. Activez-le avec /player <bot> autosleep on.",
   "botsleep.now_on": "%s se couche désormais tout seul chaque nuit, dans un lit libre à moins de 3 blocs.",
   "botsleep.now_off": "%s ne se couche plus tout seul.",
   "botsleep.no_bed": "Il n'y a aucun lit libre à moins de 3 blocs de %s pour le moment. Placez-en un à côté.",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "Le sommeil autonome des bots a échoué et est désactivé jusqu'au redémarrage du serveur.",
   "log.botsleep_load_failed": "Les choix de sommeil des bots dans %s n'ont pas pu être lus ; ils ne sont pas restaurés.",
   "log.botsleep_save_failed": "Le choix de sommeil du bot pour %s n'a pas pu être enregistré.",
-  "log.recipebook_no_connection": "%s n'a pas de connexion, donc une recette nouvellement débloquée n'a pas été envoyée au jeu (elle y parviendra à la prochaine connexion). Origine :"
+  "log.recipebook_no_connection": "%s n'a pas de connexion, donc une recette nouvellement débloquée n'a pas été envoyée au jeu (elle y parviendra à la prochaine connexion). Origine :",
+  "log.travel_rule_failed": "La règle %s a échoué ; elle fonctionne comme en vanilla jusqu'au redémarrage du serveur",
+  "travel.rule_failed": "[Useleess Carpet] La règle %s a échoué et fonctionne comme en vanilla jusqu'au prochain redémarrage : %s"
 }

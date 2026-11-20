@@ -142,7 +142,8 @@
   "careful.failed": "신중한 파괴에 문제가 생겨 당분간 웅크린 상태에서만 작동합니다(설정이 기억되지 않을 수 있음). 서버 로그를 확인하세요.",
   "botsleep.not_bot": "%s은(는) Carpet 봇이 아닙니다. /player로 만든 봇만 스스로 잘 수 있습니다.",
   "botsleep.is_on": "%s은(는) 매일 밤 스스로 침대에 들어갑니다.",
-  "botsleep.is_off": "%s은(는) 스스로 침대에 들어가지 않습니다. /autosleep <bot> on 으로 켜세요.",
+  "botsleep.usage": "/player <bot> autosleep [on|off]",
+  "botsleep.is_off": "%s은(는) 스스로 잠자리에 들지 않습니다. /player <bot> autosleep on 명령어로 켜세요.",
   "botsleep.now_on": "이제 %s은(는) 3블록 안의 빈 침대에서 매일 밤 스스로 잡니다.",
   "botsleep.now_off": "%s은(는) 더 이상 스스로 침대에 들어가지 않습니다.",
   "botsleep.no_bed": "지금 %s의 3블록 안에 빈 침대가 없습니다. 옆에 침대를 놓으세요.",
@@ -153,5 +154,7 @@
   "log.botsleep_failed": "봇 자동 취침이 실패하여 서버가 재시작될 때까지 꺼집니다.",
   "log.botsleep_load_failed": "%s의 봇 취침 설정을 읽지 못했습니다. 복원되지 않습니다.",
   "log.botsleep_save_failed": "%s의 봇 취침 설정을 저장하지 못했습니다.",
-  "log.recipebook_no_connection": "%s에 연결이 없어, 새로 잠금 해제된 제작법을 게임으로 보내지 못했습니다 (다음 접속 때 게임에 반영됩니다). 출처:"
+  "log.recipebook_no_connection": "%s에 연결이 없어, 새로 잠금 해제된 제작법을 게임으로 보내지 못했습니다 (다음 접속 때 게임에 반영됩니다). 출처:",
+  "log.travel_rule_failed": "규칙 %s 적용 실패; 서버가 재시작되기 전까지 바닐라처럼 동작합니다",
+  "travel.rule_failed": "[Useleess Carpet] 규칙 %s 적용에 실패했으며, 다음 재시작 전까지 바닐라처럼 동작합니다: %s"
 }
