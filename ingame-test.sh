@@ -83,7 +83,7 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 63"
+echo "SCOPE-TEST total 67"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -596,6 +596,45 @@ else
     else why="the server did not start again"; fi
     result botsleep/remembered $ok "$why (saved file: $saved)"
 fi
+rules_end
+fi
+
+# ---- the watchdog (#18): a lagging 1.12 server catches up in one growing run of ticks; without Carpet's watchdogFix
+# (on by default here) the watchdog stopped it. A server of its own with max-tick-time 8 s; a repeating command block
+# makes every tick 120 ms long (about 8 TPS).
+if section watchdog/; then
+W="$BASE/watchdog"; mkdir -p "$W"; cd "$W" || exit 2
+cp "$A/$SERVER_JAR" .
+echo "eula=true" > eula.txt
+printf 'server-ip=127.0.0.1\nserver-port=%s\nonline-mode=false\nlevel-type=FLAT\nspawn-protection=0\nmax-players=2\nsnooper-enabled=false\nmax-tick-time=8000\nenable-command-block=true\n' "$((PORT + 5))" > server.properties
+SERVER_OPTS="-Duseleess.carpet.selftest=1"
+WATCHDOG="A single server tick took"
+wd_why() { echo "$1 ($(grep -v -e STDERR -e "^[[:space:]]*at " server.log | tail -n 8 | tr '\n' ' '))"; }
+
+rules_server
+ok=1; ask "carpet watchdogFix" "watchdogFix" && sleep 1 && tail -n 8 server.log | grep -q "true" && ok=0
+result watchdog/fix-on-by-default $ok "$(wd_why "carpet watchdogFix did not show true")"
+
+ok=1; why=""
+until_ok 20 "setblock 0 4 0 minecraft:repeating_command_block 0 replace {auto:1b,Command:\"uct hang 120\"}" "Block placed" "Cannot place|rror" || why="the lag command block could not be placed"
+if [ -z "$why" ]; then
+    sleep 45
+    if has server.log "$WATCHDOG"; then why="the watchdog stopped the lagging server with watchdogFix on"
+    elif ask "list" "players online"; then ok=0; else why="the lagging server did not answer"; fi
+fi
+result watchdog/lagging-server-survives $ok "$(wd_why "$why")"
+
+# the same lag with watchdogFix off: the crash of #18 (proves the lag above was real)
+ok=1; ask "carpet watchdogFix false" "watchdogFix"; wait_for server.log "$WATCHDOG" 120 && ok=0
+result watchdog/lag-crash-without-fix $ok "$(wd_why "no watchdog stop within 120 s of lag with watchdogFix off")"
+rules_end
+
+# a truly stuck tick (12 s, max-tick-time 8 s) still stops the server with watchdogFix on
+rm -rf crash-reports world
+rules_server
+say "uct hang 12000"
+ok=1; wait_for server.log "$WATCHDOG" 40 && ok=0
+result watchdog/stuck-tick-still-stopped $ok "$(wd_why "the watchdog did not act on a 12 s tick")"
 rules_end
 fi
 

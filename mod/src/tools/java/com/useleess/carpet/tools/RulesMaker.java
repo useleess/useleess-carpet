@@ -96,9 +96,21 @@ public final class RulesMaker {
             skipWhen(method(target, at[1], at[2]), rule.name, Integer.parseInt(skip[0]), skip[1]);
             jar.put(at[0] + ".class", write(target));
         }
+        for (String rule : OurRules.CARPET_ON_BY_DEFAULT) switchOnByDefault(clinit, rule);
         jar.put(SETTINGS + ".class", write(settings));
         CarefulBreakPatch.apply(jar, hooks);
         return jar;
+    }
+
+    /** Carpet's {@code <rule> = false} in {@code <clinit>} becomes {@code true}: exactly one such assignment, else the build fails. */
+    private static void switchOnByDefault(MethodNode clinit, String rule) {
+        List<AbstractInsnNode> found = new ArrayList<>();
+        for (AbstractInsnNode insn : clinit.instructions) {
+            if (insn.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) insn).owner.equals(SETTINGS) && ((FieldInsnNode) insn).name.equals(rule)
+                    && insn.getPrevious() != null && insn.getPrevious().getOpcode() == Opcodes.ICONST_0) found.add(insn.getPrevious());
+        }
+        if (found.size() != 1) throw new IllegalStateException("Carpet rule " + rule + ": expected one '= false' in " + SETTINGS + ".<clinit>, found " + found.size());
+        clinit.instructions.set(found.get(0), new InsnNode(Opcodes.ICONST_1));
     }
 
     private static void addField(ClassNode settings, MethodNode clinit, OurRules.Rule rule, List<String> categories) {

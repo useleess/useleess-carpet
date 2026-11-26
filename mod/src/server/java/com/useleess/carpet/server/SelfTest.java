@@ -76,7 +76,16 @@ final class SelfTest extends CommandBase {
         return "/uct <action> <player> ...";
     }
 
+    /** Command blocks (level 2) may run it: the watchdog tests make every tick slow with one. */
+    @Override public int getRequiredPermissionLevel() {
+        return 2;
+    }
+
     @Override public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        if (args[0].equals("hang")) {
+            hang(Long.parseLong(args[1]));
+            return;
+        }
         EntityPlayerMP player = getPlayer(server, sender, args[1]);
         String out;
         switch (args[0]) {
@@ -102,6 +111,15 @@ final class SelfTest extends CommandBase {
             default: out = "unknown action";
         }
         sender.sendMessage(new TextComponentString(ServerText.get("selftest.line", args[0], out)));
+    }
+
+    /** "/uct hang <ms>" (#18): this tick takes that much longer (a lagging world, or a stuck tick for the watchdog). */
+    private static void hang(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /** Creative flight on / off, as the game's own ability switch does it. */

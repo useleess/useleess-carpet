@@ -58,6 +58,9 @@ CarpetSP's rule screen.
 | `obsidianPlatformNoRegen` | false | Players arriving in the End get no new obsidian platform: nothing is placed or cleared, they appear at the usual spot even if it is in the air. |
 | `redstoneScopeLogger` | false | Redstone Scope records block changes for its tools (sub-tick, waveform, probes, rewind). Off = no recording, no extra work and no Redstone Scope log lines; its commands say it is switched off. |
 
+One of Carpet's own rules starts ON here: `watchdogFix` (Carpet's fix for a lagging server being shut down by its
+watchdog, "A single server tick took ..."). `/carpet watchdogFix false` turns it off.
+
 ## Careful break for each player
 
 Kisde Carpet's rule `carefulBreak` puts the blocks a player mines straight into that player's inventory. Useleess Carpet

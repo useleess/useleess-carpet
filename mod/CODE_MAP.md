@@ -55,6 +55,8 @@ Flow: master jar -> `makeRules` -> rules jar (`build/rules/rules-<mc>.jar`) -> `
   fails the build with its name.
 - `PatchMaker`: Gradle task `makePatch`: Mojang jar (downloaded into `build/mojang/`) + rules jar -> patch, then
   **LeakCheck** + a full rebuild compared file for file with the rules jar. Any failure fails the build.
+- `OurRules.CARPET_ON_BY_DEFAULT` (#18: `watchdogFix`): Carpet's own rules switched on by default; `RulesMaker` turns their
+  one `= false` in `CarpetSettings.<clinit>` into `true` (none or several = the build fails).
 - `CarefulBreakPatch` (called by `RulesMaker.make`, data lines `carefulBreak.class` / `carefulBreak.sneakCall` in the
   per-version rules data): gives Carpet's `carefulBreak` logger the options `sneak` (default) / `always` (the two nulls
   of its registration in `LoggerRegistry`) and replaces the one `isSneaking()` call of the miner in the drop code (`aow`)
@@ -163,5 +165,7 @@ with its default, the hook at the method's start, a missing target fails the bui
   goes, items still go, `carpet setDefault` kept over a restart). `botsleep/`: a Carpet bot, the only player, with a
   bed in reach skips the night with /player <bot> autosleep on (old /autosleep gone, tab completion), not with off / no bed, kept over a restart. `travel/`: creative flyers in end / nether portals stay with
   creativeNoClipNoPortals on, go when not flying or with it off; the End platform is built with obsidianPlatformNoRegen off, a
-  cleared one stays cleared with it on. `carefulbreak/`: a Carpet fake player mining dirt, drop in the
+  cleared one stays cleared with it on. `watchdog/` (#18, max-tick-time 8 s): watchdogFix on by default, a server
+  lagging at ~8 TPS (command block + `/uct hang 120`) keeps running, with watchdogFix off it is stopped, a 12 s tick still is.
+  `carefulbreak/`: a Carpet fake player mining dirt, drop in the
   inventory or on the ground per option / rule, the choice kept over a restart. `FILTER=` skips the parts it does not need.

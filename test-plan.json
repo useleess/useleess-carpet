@@ -60,6 +60,11 @@
    "prefix": "recipes/recipebook-",
    "min": 1,
    "what": "#12 crash: a recipe unlocked for a player with no connection is skipped (stays unlocked), the server keeps running"
+  },
+  {
+   "prefix": "watchdog/",
+   "min": 4,
+   "what": "#18: Carpet's watchdogFix on by default; a lagging server (~8 TPS) is not stopped by the watchdog, the same lag with watchdogFix off is (the crash); a truly stuck tick still is"
   }
  ]
 }

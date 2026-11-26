@@ -39,6 +39,12 @@ public final class OurRules {
         }
     }
 
+    /**
+     * Carpet's own rules that are on by default here. #18: watchdogFix, without it a lagging 1.12 server (below 20 TPS)
+     * catches up in one run of ticks that grows until the watchdog stops the server.
+     */
+    public static final List<String> CARPET_ON_BY_DEFAULT = Collections.singletonList("watchdogFix");
+
     public static final List<Rule> ALL = Collections.unmodifiableList(Arrays.asList(
             new Rule("endPortalNoTeleportPlayer", false,
                     "Players touching an end portal stay where they are; items, mobs and other entities still go through.",

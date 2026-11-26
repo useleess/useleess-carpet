@@ -271,6 +271,36 @@ class RulesTest {
         assertEquals("testOn", ((FieldInsnNode) clinit.get(1)).name);
     }
 
+    @Test void watchdogFixIsOnByDefault() throws IOException {
+        for (String jar : new String[]{"useleess.masterJar", "useleess.rulesJar"}) {
+            List<AbstractInsnNode> clinit = code(method(node(jar(jar), "carpet/CarpetSettings"), "<clinit>", "()V"));
+            List<Integer> defaults = new ArrayList<>();
+            for (int i = 1; i < clinit.size(); i++) {
+                if (clinit.get(i) instanceof FieldInsnNode && ((FieldInsnNode) clinit.get(i)).name.equals("watchdogFix")) defaults.add(clinit.get(i - 1).getOpcode());
+            }
+            assertEquals(Collections.singletonList(jar.equals("useleess.rulesJar") ? Opcodes.ICONST_1 : Opcodes.ICONST_0), defaults, jar + " (#18)");
+        }
+    }
+
+    @Test void aCarpetRuleWithoutItsFalseDefaultFailsTheBuild() throws IOException {
+        Map<String, byte[]> master = new java.util.HashMap<>(jar("useleess.masterJar"));
+        org.objectweb.asm.ClassWriter w = new org.objectweb.asm.ClassWriter(0);
+        withoutField(node(master, "carpet/CarpetSettings"), "watchdogFix").accept(w);
+        master.put("carpet/CarpetSettings.class", w.toByteArray());
+        assertFails(master, RulesMaker.hooks("1.12.2"), "watchdogFix");
+    }
+
+    private static ClassNode withoutField(ClassNode settings, String field) {
+        MethodNode clinit = method(settings, "<clinit>", "()V");
+        for (AbstractInsnNode i : clinit.instructions.toArray()) {
+            if (i instanceof FieldInsnNode && ((FieldInsnNode) i).name.equals(field)) {
+                clinit.instructions.remove(i.getPrevious());
+                clinit.instructions.remove(i);
+            }
+        }
+        return settings;
+    }
+
     static Properties with(Properties base, String key, String value) {
         Properties p = new Properties();
         p.putAll(base);
