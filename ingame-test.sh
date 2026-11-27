@@ -616,7 +616,11 @@ ok=1; ask "carpet watchdogFix" "watchdogFix" && sleep 1 && tail -n 8 server.log 
 result watchdog/fix-on-by-default $ok "$(wd_why "carpet watchdogFix did not show true")"
 
 ok=1; why=""
-until_ok 20 "setblock 0 4 0 minecraft:repeating_command_block 0 replace {auto:1b,Command:\"uct hang 120\"}" "Block placed" "Cannot place|rror" || why="the lag command block could not be placed"
+# a player keeps the chunk loaded: the world's spawn can be far from 0, 0 ("Cannot place block outside of the world")
+say "player UcLag spawn"
+wait_for server.log "UcLag joined" 60 || why="player UcLag did not join within 60 s"
+[ -z "$why" ] && { say "tp UcLag 2.5 4 2.5"; say "gamemode creative UcLag"; }
+[ -z "$why" ] && { until_ok 20 "setblock 0 4 0 minecraft:repeating_command_block 0 replace {auto:1b,Command:\"uct hang 120\"}" "Block placed" "Cannot place|rror" || why="the lag command block could not be placed"; }
 if [ -z "$why" ]; then
     sleep 45
     if has server.log "$WATCHDOG"; then why="the watchdog stopped the lagging server with watchdogFix on"
