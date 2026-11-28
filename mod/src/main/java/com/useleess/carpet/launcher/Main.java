@@ -88,6 +88,14 @@ public final class Main {
     }
 
     /**
+     * The folder the installer window works in: the jar's own, since a double-click may start Java in another one
+     * (C:\Windows\system32, seen with 0.4.1); the start folder only when not run from a jar (tests).
+     */
+    static Path windowFolder(Path selfJar, Path startFolder) {
+        return (selfJar != null ? selfJar.toAbsolutePath().getParent() : startFolder).toAbsolutePath();
+    }
+
+    /**
      * Double-click start: the installer window builds the server jar, finds a Java 8, writes our start script
      * (the owner's own are never changed), asks for the EULA, starts the server in Minecraft's own server window as
      * a separate program, then shows in a highlighted box which script to double-click from now on.
@@ -99,9 +107,7 @@ public final class Main {
             Patch patch = readPatch();
             VersionInfo v = VersionInfo.load(patch.minecraft);
             log.say("start", buildVersion(), v.minecraft);
-            // the jar's own folder: a double-click may start Java in another one (C:\Windows\system32, seen 0.4.1)
-            Path self = SelfRemover.selfJar();
-            Path folder = self != null ? self.toAbsolutePath().getParent() : Paths.get("").toAbsolutePath();
+            Path folder = windowFolder(SelfRemover.selfJar(), Paths.get(""));
             Path built = Installer.ensure(patch, v, folder, Downloader.HTTP, log);
             Path java = JavaFinder.findJava8();
             Path script = scripts(folder, built, java == null ? "java" : java.toString(), log);
