@@ -83,7 +83,7 @@ wait_for() {
     while [ $n -lt "$3" ]; do has "$1" "$2" && return 0; sleep 1; n=$((n + 1)); done
     return 1
 }
-echo "SCOPE-TEST total 67"
+echo "SCOPE-TEST total 68"
 SERVER_JAR=useleess-carpet-1.12.2-server.jar
 echo "launcher: $JAR"
 
@@ -1040,6 +1040,18 @@ n=0; while [ $n -lt 60 ] && ! has logs/latest.log "Stopping server"; do sleep 1;
 has logs/latest.log "Stopping server" || ok=1
 result gui/start-script-works $ok "start-useleess-carpet.bat did not start and stop the server: $(tail -3 bat.log | tr '\n' ' ')"
 kill_servers_in "$E"
+
+# G4. started from another folder (a double-click can start Java in C:\Windows\system32): all lands next to the jar
+H="$BASE/gui-jar-folder"; O="$BASE/gui-other-cwd"; mkdir -p "$H" "$O"
+cp "$JAR" "$H/$LAUNCHER"; cp "$A/$SERVER_JAR" "$H/"
+cd "$O" || exit 2
+"$JAVA" -Duseleess.carpet.gui=true -Duseleess.carpet.answers="eula=yes" -jar "$H/$LAUNCHER" > "$H/gui.log" 2>&1; code=$?
+sed 's/^/    gui: /' "$H/gui.log"
+ok=1; [ "$code" = 0 ] && has "$H/start-useleess-carpet.bat" "-jar $SERVER_JAR nogui" && has "$H/eula.txt" "eula=true"     && [ -z "$(ls -A "$O")" ] && ok=0
+result gui/jar-folder-not-start-folder $ok "exit $code; next to the jar: $(ls "$H" | tr '
+' ' '); start folder: $(ls -A "$O" | tr '
+' ' ')"
+kill_servers_in "$H"
 
 # G3. the EULA declined: nothing started, the own script unchanged, the installer stays
 F="$BASE/gui-declined"; mkdir -p "$F"

@@ -99,7 +99,9 @@ public final class Main {
             Patch patch = readPatch();
             VersionInfo v = VersionInfo.load(patch.minecraft);
             log.say("start", buildVersion(), v.minecraft);
-            Path folder = Paths.get("").toAbsolutePath();
+            // the jar's own folder: a double-click may start Java in another one (C:\Windows\system32, seen 0.4.1)
+            Path self = SelfRemover.selfJar();
+            Path folder = self != null ? self.toAbsolutePath().getParent() : Paths.get("").toAbsolutePath();
             Path built = Installer.ensure(patch, v, folder, Downloader.HTTP, log);
             Path java = JavaFinder.findJava8();
             Path script = scripts(folder, built, java == null ? "java" : java.toString(), log);

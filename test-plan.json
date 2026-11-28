@@ -13,8 +13,8 @@
   },
   {
    "prefix": "gui/",
-   "min": 10,
-   "what": "double-click installer window (user 2026-10-30): our own start-useleess-carpet.bat made, the owner's scripts never changed, EULA asked, Java 8 found, server started in its own window, installer removed, the made script starts the server"
+   "min": 11,
+   "what": "double-click installer window (user 2026-10-30): our own start-useleess-carpet.bat made, the owner's scripts never changed, EULA asked, Java 8 found, server started in its own window, installer removed, the made script starts the server; works in the jar's own folder whatever folder Java started in"
   },
   {
    "prefix": "rules/",
